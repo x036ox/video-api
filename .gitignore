@@ -40,3 +40,7 @@ build/
 
 ### profile properties
 src/main/resources/application-dev.yml
+
+## static resources
+src/main/resources/static
+src/main/resources/templates
