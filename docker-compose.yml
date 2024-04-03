@@ -5,7 +5,7 @@ services:
 #    image: artur110/yout-back
 #    restart: unless-stopped
 #    ports:
-#      - "8082:8080"
+#      - "8080:8080"
 #    depends_on:
 #      - db
 #      - kafka
@@ -13,17 +13,17 @@ services:
 #      - media-processor
 #    environment:
 #      - SPRING_PROFILES_ACTIVE=prod
-#
-#  media-processor:
-#    image: artur110/media-processor
-#    restart: unless-stopped
-#    ports:
-#      - "8083:8081"
-#    depends_on:
-#      - kafka
-#      - minio
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=prod
+
+  media-processor:
+    image: artur110/media-processor
+    restart: unless-stopped
+    ports:
+      - "8083:8081"
+    depends_on:
+      - kafka
+      - minio
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
 
   db:
     image: mysql:latest
