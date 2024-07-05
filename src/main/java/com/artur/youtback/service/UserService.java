@@ -63,8 +63,6 @@ public class UserService implements UserDetailsService {
     @Autowired
     VideoRepository videoRepository;
     @Autowired
-    TokenService tokenService;
-    @Autowired
     LikeRepository likeRepository;
     @Autowired
     UserMetadataRepository userMetadataRepository;

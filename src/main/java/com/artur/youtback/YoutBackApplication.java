@@ -1,6 +1,5 @@
 package com.artur.youtback;
 
-import com.artur.youtback.config.RsaKeyProperties;
 import com.artur.youtback.service.UserService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -13,7 +12,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @SpringBootApplication
 @EnableTransactionManagement
-@EnableConfigurationProperties(RsaKeyProperties.class)
 @Component
 public class YoutBackApplication {
 

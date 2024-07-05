@@ -9,7 +9,6 @@ import com.artur.youtback.model.user.UserAuthenticationRequest;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.service.EmailService;
-import com.artur.youtback.service.TokenService;
 import com.artur.youtback.service.UserService;
 import com.artur.youtback.utils.AppCookieUtils;
 import com.artur.youtback.utils.Utils;
@@ -25,7 +24,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,8 +41,6 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-    @Autowired
-    TokenService tokenService;
     @Autowired
     EmailService emailService;
 
@@ -125,30 +121,6 @@ public class UserController {
         }
     }
 
-    @GetMapping("/refresh")
-    public ResponseEntity<?> validateUser(@Autowired HttpServletRequest request, @Autowired HttpServletResponse response){
-        Cookie[] cookies = request.getCookies();
-        if(cookies == null){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-        Optional<Cookie> optionalCookie = Arrays.stream(cookies).filter(el -> el.getName().equals(AppCookieUtils.REFRESH_TOKEN)).findFirst();
-        if(optionalCookie.isPresent()){
-            Cookie refreshCookie = optionalCookie.get();
-            String refreshToken = refreshCookie.getValue();
-            if(tokenService.isTokenValid(refreshToken)){
-                try {
-                    User user = userService.findById(Long.valueOf(tokenService.decode(refreshToken).getSubject()));
-                    String accessToken = tokenService.generateAccessToken(user);
-                    response.addHeader("accessToken", accessToken);
-                    response.addHeader("Access-Control-Expose-Headers", "accessToken");
-                    return ResponseEntity.ok(user);
-                } catch (NotFoundException e) {
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-                }
-            }
-        }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-    }
 
     @GetMapping("/subscribed")
     public ResponseEntity<?> hasUserSubscribedChannel(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId")Long channelId){
@@ -171,24 +143,6 @@ public class UserController {
     }
 
 
-    @PostMapping("/login")
-    public ResponseEntity<?>  loginByEmailAndPassword(@RequestBody UserAuthenticationRequest authenticationRequest, @Autowired BCryptPasswordEncoder passwordEncoder, @Autowired HttpServletResponse response){
-        try {
-            User user = userService.findByEmail(authenticationRequest.email());
-            if(!passwordEncoder.matches(authenticationRequest.password(), user.getPassword())){
-                throw new IncorrectPasswordException("Incorrect password " + authenticationRequest.email());
-            }
-            response.addCookie(AppCookieUtils.refreshCookie(tokenService.generateRefreshToken(user)));
-            response.addHeader("accessToken", tokenService.generateAccessToken(user));
-            return ResponseEntity.ok(user);
-        } catch (NotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        } catch(IncorrectPasswordException e){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-        }
-
-    }
-
     @PostMapping("/not-interested")
     public ResponseEntity<?> notInterested(@RequestParam Long userId, @RequestParam Long videoId){
         try{
@@ -204,25 +158,6 @@ public class UserController {
         }
     }
 
-    @PostMapping("/registration")
-    public ResponseEntity<?> registerUser(@ModelAttribute UserCreateRequest userCreateRequest, @Autowired HttpServletResponse response){
-        try {
-//            emailService.sendConfirmationEmail(email);
-            User registeredUser = userService.registerUser(userCreateRequest);
-            response.addCookie(AppCookieUtils.refreshCookie(tokenService.generateRefreshToken(registeredUser)));
-            response.addHeader("accessToken", tokenService.generateAccessToken(registeredUser));
-            return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
-        }catch (AlreadyExistException | NotFoundException e){
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(null);
-        } catch (ConstraintViolationException e){
-            logger.error(e.toString());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-        } catch (Exception e){
-            logger.error(e.toString());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
-
-    }
 
     @PostMapping("/like")
     public ResponseEntity<?> likeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId") Long userId){
@@ -335,16 +270,6 @@ public class UserController {
             return ResponseEntity.ok(null);
         } catch (NotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
-    }
-
-    @DeleteMapping("/logout")
-    public ResponseEntity<?> logout(@Autowired HttpServletRequest request, HttpServletResponse response){
-        try {
-            AppCookieUtils.removeRefreshCookie(request, response);
-            return ResponseEntity.ok(null);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
     }
 }

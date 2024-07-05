@@ -5,7 +5,6 @@ import com.artur.youtback.exception.NotFoundException;
 import com.artur.youtback.model.video.Video;
 import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;
-import com.artur.youtback.service.TokenService;
 import com.artur.youtback.service.UserService;
 import com.artur.youtback.service.VideoService;
 import com.artur.youtback.utils.AppConstants;
@@ -41,8 +40,6 @@ public class VideoController {
     private VideoService videoService;
     @Autowired
     private UserService userService;
-    @Autowired
-    private TokenService tokenService;
     @Autowired
     JwtDecoder jwtDecoder;
 

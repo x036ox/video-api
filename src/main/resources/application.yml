@@ -28,6 +28,12 @@ spring:
         smtp:
           auth: true
           starttls: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8090/oauth2/jwks
+
 
 server:
   ssl:
