@@ -11,6 +11,7 @@ import com.artur.youtback.utils.AppConstants;
 import com.artur.youtback.utils.FindOptions;
 import com.artur.youtback.utils.SortOption;
 import com.artur.youtback.utils.Utils;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +99,7 @@ public class VideoController {
     }
 
     @GetMapping("/admin")
+    @RolesAllowed("ROLE_ADMIN")
     public ResponseEntity<?> findByOption(
             @RequestParam List<String> option,
             @RequestParam List<String> value
@@ -162,6 +164,7 @@ public class VideoController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("")
     public ResponseEntity<?> create(@ModelAttribute VideoCreateRequest video, HttpServletRequest request, Authentication auth){
         try {
@@ -179,7 +182,7 @@ public class VideoController {
     }
 
     @PostMapping("/admin/add")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RolesAllowed("ROLE_ADMIN")
     public ResponseEntity<?> addVideos(@RequestParam("a") Integer amount){
         try {
             return ResponseEntity.ok(videoService.addVideos(amount));
@@ -189,6 +192,7 @@ public class VideoController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("")
     public ResponseEntity<?> update(@ModelAttribute VideoUpdateRequest updateRequest){
         try{
@@ -201,6 +205,7 @@ public class VideoController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("")
     public ResponseEntity<String> deleteById(@RequestParam(name = "videoId") Long id){
         try{

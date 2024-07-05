@@ -1,21 +1,13 @@
 package com.artur.youtback.controller;
 
 import com.artur.youtback.entity.SearchHistory;
-import com.artur.youtback.exception.AlreadyExistException;
-import com.artur.youtback.exception.IncorrectPasswordException;
 import com.artur.youtback.exception.NotFoundException;
 import com.artur.youtback.model.user.User;
-import com.artur.youtback.model.user.UserAuthenticationRequest;
-import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.service.EmailService;
 import com.artur.youtback.service.UserService;
-import com.artur.youtback.utils.AppCookieUtils;
 import com.artur.youtback.utils.Utils;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.ConstraintViolationException;
+import jakarta.annotation.security.RolesAllowed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/user")
@@ -62,6 +52,7 @@ public class UserController {
     }
 
     @GetMapping("/admin")
+    @RolesAllowed("ROLE_ADMIN")
     public ResponseEntity<?> findByOption(
             @RequestParam List<String> option,
             @RequestParam List<String> value
@@ -84,6 +75,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/liked")
     public ResponseEntity<?> hasUserLikedVideo(@RequestParam(name = "userId") Long userId, @RequestParam(name = "videoId")Long videoId){
         try {
@@ -93,6 +85,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/subscribes")
     public ResponseEntity<?> getUserSubscribes(@RequestParam Long userId){
         try {
@@ -102,6 +95,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/likes")
     public ResponseEntity<?> getUserLikes(@RequestParam Long userId){
         try {
@@ -112,7 +106,9 @@ public class UserController {
     }
 
     @GetMapping("/watch-history")
-    public ResponseEntity<?> getWatchHistory(@RequestParam Long userId){
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getWatchHistory(@RequestParam Long userId, Authentication authentication){
+        //TODO: obtain id from authentication
         try{
             return ResponseEntity.ok(userService.getWatchHistory(userId));
         } catch(NotFoundException e){
@@ -122,6 +118,7 @@ public class UserController {
     }
 
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/subscribed")
     public ResponseEntity<?> hasUserSubscribedChannel(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId")Long channelId){
         try {
@@ -131,6 +128,7 @@ public class UserController {
         }
     }
 
+    //TODO: should be moved to authorization server
     @GetMapping("/confirm-email")
     public ResponseEntity<Boolean> confirmEmail(@RequestParam("u") String emailEncoded){
         try {
@@ -144,6 +142,7 @@ public class UserController {
 
 
     @PostMapping("/not-interested")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> notInterested(@RequestParam Long userId, @RequestParam Long videoId){
         try{
             userService.notInterested(videoId, userId);
@@ -160,6 +159,7 @@ public class UserController {
 
 
     @PostMapping("/like")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> likeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId") Long userId){
         try{
             userService.likeVideo(userId, videoId);
@@ -169,6 +169,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/search-history")
     public ResponseEntity<?> addSearchOptionToUserById(@Autowired Authentication authentication, @RequestBody SearchHistory searchOption){
         if(authentication == null){
@@ -183,6 +184,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/upload")
     public ResponseEntity<?> uploadImage(@RequestParam("imageFile") MultipartFile file, @RequestParam Long userId){
         try(InputStream fileInputStream = file.getInputStream()){
@@ -194,7 +196,7 @@ public class UserController {
     }
 
     @PostMapping("/admin/add")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> addUsers(@RequestParam("a") Integer value){
         try{
             return ResponseEntity.ok(userService.addUsers(value));
@@ -204,6 +206,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("")
     public ResponseEntity<String> update(@ModelAttribute UserUpdateRequest user){
         try{
@@ -217,6 +220,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/subscribe")
     public ResponseEntity<?> subscribeById(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId") Long subscribedChannel){
         try {
@@ -227,6 +231,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/unsubscribe")
     public ResponseEntity<?> unsubscribeById(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId") Long subscribedChannel){
         try {
@@ -237,6 +242,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("")
     public ResponseEntity<String> deleteById(@RequestParam(name = "userId") Long id){
         try{
@@ -249,6 +255,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("search-history")
     public ResponseEntity<String> deleteSearchOption(@Autowired Authentication authentication, @RequestBody SearchHistory searchHistory){
         if(authentication == null){
@@ -263,6 +270,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/dislike")
     public ResponseEntity<?> dislikeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId", required = false) Long userId){
         try{
