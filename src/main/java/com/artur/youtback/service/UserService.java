@@ -165,6 +165,12 @@ public class UserService implements UserDetailsService {
         logger.info("User with id {} successfully deleted" , id);
     }
 
+    public String getPicture(String name) throws Exception {
+        try(InputStream inputStream = objectStorageService.getObject(name)){
+            return ImageUtils.encodeImageBase64(inputStream);
+        }
+    }
+
     /**Update {@link UserEntity}. The fields that could be updated:
      * <ul>
      *     <li>Username - user`s username. Can be null

@@ -105,6 +105,17 @@ public class UserController {
         }
     }
 
+    @GetMapping("/picture/{name}")
+    public ResponseEntity<?> getPicture(@PathVariable String name){
+        try {
+            return ResponseEntity.ok(userService.getPicture(name));
+        } catch (Exception e) {
+            logger.error("Could not retrieve user picture: " + name, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+
     @GetMapping("/watch-history")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getWatchHistory(@RequestParam Long userId, Authentication authentication){
