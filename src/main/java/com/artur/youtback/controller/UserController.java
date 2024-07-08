@@ -1,11 +1,13 @@
 package com.artur.youtback.controller;
 
-import com.artur.youtback.entity.SearchHistory;
+import com.artur.youtback.exception.AlreadyExistException;
 import com.artur.youtback.exception.NotFoundException;
 import com.artur.youtback.model.user.User;
+import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.service.EmailService;
 import com.artur.youtback.service.UserService;
+import com.artur.youtback.utils.AuthenticationUtils;
 import com.artur.youtback.utils.Utils;
 import jakarta.annotation.security.RolesAllowed;
 import org.slf4j.Logger;
@@ -16,12 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-import java.util.Base64;
 import java.util.List;
 
 @RestController
@@ -37,7 +35,7 @@ public class UserController {
 
 
     @GetMapping("")
-    public ResponseEntity<?> find(@RequestParam(required = false) Long id){
+    public ResponseEntity<?> find(@RequestParam(required = false) String id){
         try{
             if(id != null){
                 User user = userService.findById(id);
@@ -67,7 +65,7 @@ public class UserController {
     }
 
     @GetMapping("/videos")
-    public ResponseEntity<?> getUserVideos(@RequestParam(name = "userId") Long userId, @RequestParam(required = false, name = "sortOption") Integer sortOption){
+    public ResponseEntity<?> getUserVideos(@RequestParam(name = "userId") String userId, @RequestParam(required = false, name = "sortOption") Integer sortOption){
         try {
             return ResponseEntity.ok(userService.getAllUserVideos(userId,sortOption != null ?  Utils.processSortOptions(sortOption) : null));
         } catch (NotFoundException e){
@@ -77,7 +75,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/liked")
-    public ResponseEntity<?> hasUserLikedVideo(@RequestParam(name = "userId") Long userId, @RequestParam(name = "videoId")Long videoId){
+    public ResponseEntity<?> hasUserLikedVideo(@RequestParam(name = "userId") String userId, @RequestParam(name = "videoId")Long videoId){
         try {
             return ResponseEntity.ok(userService.hasUserLikedVideo(userId,videoId));
         } catch(NotFoundException e){
@@ -85,9 +83,19 @@ public class UserController {
         }
     }
 
+    @GetMapping("/user-info")
+    public ResponseEntity<?> getUserInfo(@RequestParam String id){
+        try {
+            return ResponseEntity.ok(userService.findById(id));
+        } catch (NotFoundException e) {
+            logger.warn("User with id: [" + id + "] was not found", e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/subscribes")
-    public ResponseEntity<?> getUserSubscribes(@RequestParam Long userId){
+    public ResponseEntity<?> getUserSubscribes(@RequestParam String userId){
         try {
             return ResponseEntity.ok(userService.getUserSubscribes(userId));
         } catch (NotFoundException e){
@@ -97,7 +105,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/likes")
-    public ResponseEntity<?> getUserLikes(@RequestParam Long userId){
+    public ResponseEntity<?> getUserLikes(@RequestParam String userId){
         try {
             return ResponseEntity.ok(userService.getUserLikes(userId));
         } catch (NotFoundException e){
@@ -115,13 +123,22 @@ public class UserController {
         }
     }
 
+    @GetMapping("/search-history")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getSearchHistory(Authentication authentication){
+        try {
+           return ResponseEntity.ok(userService.findById(AuthenticationUtils.getUserId(authentication)).getSearchHistory());
+        } catch (NotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
 
     @GetMapping("/watch-history")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> getWatchHistory(@RequestParam Long userId, Authentication authentication){
-        //TODO: obtain id from authentication
+    public ResponseEntity<?> getWatchHistory(){
         try{
-            return ResponseEntity.ok(userService.getWatchHistory(userId));
+            return ResponseEntity.ok(userService.getWatchHistory(AuthenticationUtils.getUserId()));
         } catch(NotFoundException e){
             logger.error(e.getMessage());
             return ResponseEntity.notFound().build();
@@ -131,7 +148,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/subscribed")
-    public ResponseEntity<?> hasUserSubscribedChannel(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId")Long channelId){
+    public ResponseEntity<?> hasUserSubscribedChannel(@RequestParam(name = "userId") String userId, @RequestParam(name = "channelId")String channelId){
         try {
             return ResponseEntity.ok(userService.hasUserSubscribedChannel(userId,channelId));
         } catch(NotFoundException e){
@@ -139,22 +156,10 @@ public class UserController {
         }
     }
 
-    //TODO: should be moved to authorization server
-    @GetMapping("/confirm-email")
-    public ResponseEntity<Boolean> confirmEmail(@RequestParam("u") String emailEncoded){
-        try {
-            String emailDecoded = new String(Base64.getDecoder().decode(emailEncoded));
-            userService.confirmEmail(emailDecoded);
-            return ResponseEntity.ok(true);
-        } catch (NotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(false);
-        }
-    }
-
 
     @PostMapping("/not-interested")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> notInterested(@RequestParam Long userId, @RequestParam Long videoId){
+    public ResponseEntity<?> notInterested(@RequestParam String userId, @RequestParam Long videoId){
         try{
             userService.notInterested(videoId, userId);
             return ResponseEntity.ok(null);
@@ -168,10 +173,22 @@ public class UserController {
         }
     }
 
+    @PostMapping("/user-info")
+    public ResponseEntity<?> postUser(@ModelAttribute UserCreateRequest userCreateRequest){
+        try{
+            userService.registerUser(userCreateRequest);
+            return ResponseEntity.ok(null);
+        } catch (AlreadyExistException e){
+          return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
+        } catch(Exception e){
+            logger.error("Could not create user", e);
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
 
     @PostMapping("/like")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> likeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId") Long userId){
+    public ResponseEntity<?> likeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId") String userId){
         try{
             userService.likeVideo(userId, videoId);
             return ResponseEntity.ok(null);
@@ -182,29 +199,15 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/search-history")
-    public ResponseEntity<?> addSearchOptionToUserById(@Autowired Authentication authentication, @RequestBody SearchHistory searchOption){
-        if(authentication == null){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-        Jwt jwt =(Jwt) authentication.getPrincipal();
+    public ResponseEntity<?> addSearchOptionToUserById(Authentication authentication, @RequestParam String value){
         try{
-            userService.addSearchOption(Long.parseLong(jwt.getSubject()), searchOption.getSearchOption());
+            userService.addSearchOption(AuthenticationUtils.getUserId(authentication), value);
             return ResponseEntity.status(HttpStatus.OK).body("Search option added");
         }catch (NotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/upload")
-    public ResponseEntity<?> uploadImage(@RequestParam("imageFile") MultipartFile file, @RequestParam Long userId){
-        try(InputStream fileInputStream = file.getInputStream()){
-            userService.saveImage(fileInputStream, userId.toString());
-            return ResponseEntity.ok(null);
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
-    }
 
     @PostMapping("/admin/add")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
@@ -219,9 +222,9 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @PutMapping("")
-    public ResponseEntity<String> update(@ModelAttribute UserUpdateRequest user){
+    public ResponseEntity<String> update(@ModelAttribute UserUpdateRequest user, Authentication authentication){
         try{
-            userService.update(user);
+            userService.update(user, AuthenticationUtils.getUserId(authentication));
             return ResponseEntity.ok(null);
         }catch(NotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
@@ -233,7 +236,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/subscribe")
-    public ResponseEntity<?> subscribeById(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId") Long subscribedChannel){
+    public ResponseEntity<?> subscribeById(@RequestParam(name = "userId") String userId, @RequestParam(name = "channelId") String subscribedChannel){
         try {
             userService.subscribeById(userId, subscribedChannel);
             return ResponseEntity.ok(null);
@@ -244,7 +247,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/unsubscribe")
-    public ResponseEntity<?> unsubscribeById(@RequestParam(name = "userId") Long userId, @RequestParam(name = "channelId") Long subscribedChannel){
+    public ResponseEntity<?> unsubscribeById(@RequestParam(name = "userId") String userId, @RequestParam(name = "channelId") String subscribedChannel){
         try {
             userService.unsubscribeById(userId, subscribedChannel);
             return ResponseEntity.ok(null);
@@ -255,7 +258,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("")
-    public ResponseEntity<String> deleteById(@RequestParam(name = "userId") Long id){
+    public ResponseEntity<String> deleteById(@RequestParam(name = "userId") String id){
         try{
             userService.deleteById(id);
             return ResponseEntity.ok(null);
@@ -268,14 +271,10 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("search-history")
-    public ResponseEntity<String> deleteSearchOption(@Autowired Authentication authentication, @RequestBody SearchHistory searchHistory){
-        if(authentication == null){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-        Jwt jwt =(Jwt) authentication.getPrincipal();
+    public ResponseEntity<?> deleteSearchOption(@Autowired Authentication authentication, @RequestParam String searchOptionValue){
         try{
-            userService.deleteSearchOption(Long.parseLong(jwt.getSubject()), searchHistory.getSearchOption());
-            return ResponseEntity.ok("Deleted");
+            userService.deleteSearchOption(AuthenticationUtils.getUserId(authentication), searchOptionValue);
+            return ResponseEntity.ok(null);
         }catch (NotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
@@ -283,7 +282,7 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/dislike")
-    public ResponseEntity<?> dislikeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId", required = false) Long userId){
+    public ResponseEntity<?> dislikeVideoById(@RequestParam(name = "videoId") Long videoId, @RequestParam(name = "userId", required = false) String userId){
         try{
             userService.dislikeVideo(userId, videoId);
             return ResponseEntity.ok(null);

@@ -107,7 +107,7 @@ public class VideoService {
     }
 
     public List<Video> recommendations(
-            Long userId,
+            String userId,
             Integer page,
             @NotNull String[] languages,
             Integer size,
@@ -124,7 +124,7 @@ public class VideoService {
                 return videos.stream().map(videoConverter::convertToModel).toList();
             }
         } catch (NotFoundException e) {
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -137,7 +137,7 @@ public class VideoService {
      * @throws NotFoundException if video id not found
      */
     @Transactional
-    public Video watchById(Long videoId, Long userId) throws NotFoundException{
+    public Video watchById(Long videoId, String userId) throws NotFoundException{
         VideoEntity videoEntity = videoRepository.findById(videoId).orElseThrow(() -> new NotFoundException("Video not found"));
         videoEntity.setViews(videoEntity.getViews() + 1);
         if(userId != null){
@@ -150,6 +150,7 @@ public class VideoService {
                 }
                 userMetadata.incrementLanguage(videoEntity.getVideoMetadata().getLanguage());
                 userMetadata.incrementCategory(videoEntity.getVideoMetadata().getCategory());
+                //TODO: change logic of watch history
                 userEntity.getWatchHistory().removeIf(el ->{
                     if(el.getDate().isAfter(LocalDateTime.now().minusDays(1))&& Objects.equals(el.getVideoId(), videoId)){
                         watchHistoryRepository.deleteById(el.getId());
@@ -221,7 +222,7 @@ public class VideoService {
         }
     }
 
-    public Optional<VideoEntity> create(VideoCreateRequest video, Long userId)  throws Exception{
+    public Optional<VideoEntity> create(VideoCreateRequest video, String userId)  throws Exception{
         try(
                 InputStream thumbnailInputStream = video.thumbnail().getInputStream();
                 ByteArrayInputStream videoInputStream = new ByteArrayInputStream(video.video().getBytes());
@@ -230,7 +231,7 @@ public class VideoService {
         }
     }
 
-    public Optional<VideoEntity> create(String title, String description, String category, File thumbnail, File video, Long userId)  throws Exception{
+    public Optional<VideoEntity> create(String title, String description, String category, File thumbnail, File video, String userId)  throws Exception{
         try(
                 InputStream thumbnailInputStream = new FileInputStream(thumbnail);
                 ByteArrayInputStream videoInputStream = new ByteArrayInputStream(Files.readAllBytes(video.toPath()));
@@ -252,7 +253,7 @@ public class VideoService {
      * @throws Exception if user not found or failed uploading to {@link ObjectStorageService} or failed to parse duration.
      */
     @Transactional
-    private Optional<VideoEntity> create(String title, String description, String category, InputStream thumbnail, ByteArrayInputStream video, Long userId) throws Exception{
+    private Optional<VideoEntity> create(String title, String description, String category, InputStream thumbnail, ByteArrayInputStream video, String userId) throws Exception{
         //TODO: avoid to use ByteArrayInputStream, in order not to store whole video in memory
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         String folder = null;
@@ -411,7 +412,7 @@ public class VideoService {
                     VideoEntity createdVideo = create(title, description, category, thumbnails[categoryIndex][(int)Math.floor(Math.random() * thumbnails[categoryIndex].length)],
                             videos[categoryIndex][(int)Math.floor(Math.random() * videos[categoryIndex].length)], user.getId()).orElseThrow(()-> new RuntimeException("user not found"));
                     int likesToAdd = (int)Math.floor(Math.random() * users.size());
-                    Set<Long> exceptions = new HashSet<>();
+                    Set<String> exceptions = new HashSet<>();
                     for (int i = 0;i < likesToAdd;i++){
                         Instant timestamp = Instant.now().minus((int)Math.floor(Math.random() * 2592000), ChronoUnit.SECONDS);
                         UserEntity userEntity = users.get((int)Math.floor(Math.random() * users.size()));

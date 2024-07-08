@@ -7,11 +7,7 @@ import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;
 import com.artur.youtback.service.UserService;
 import com.artur.youtback.service.VideoService;
-import com.artur.youtback.utils.AppConstants;
-import com.artur.youtback.utils.FindOptions;
-import com.artur.youtback.utils.SortOption;
-import com.artur.youtback.utils.Utils;
-import jakarta.annotation.security.RolesAllowed;
+import com.artur.youtback.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
@@ -62,13 +57,8 @@ public class VideoController {
                 long start = System.currentTimeMillis();
                 String languages = request.getHeader("User-Languages");
                 if(languages.isEmpty()) throw new IllegalArgumentException("User languages should not be empty");
-                String subject = null;
-                if(authentication != null){
-                    JwtAuthenticationToken jwt = (JwtAuthenticationToken) authentication;
-                    subject = jwt.getToken().getSubject();
-                }
                 List<Video> videos = videoService.recommendations(
-                        subject != null ? Long.parseLong(subject) : null,
+                        AuthenticationUtils.getUserId(authentication),
                         page,
                         languages.split(","),
                         size == null ? AppConstants.MAX_VIDEOS_PER_REQUEST : size,
@@ -99,7 +89,7 @@ public class VideoController {
     }
 
     @GetMapping("/admin")
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> findByOption(
             @RequestParam List<String> option,
             @RequestParam List<String> value
@@ -134,7 +124,7 @@ public class VideoController {
             headers.set("Content-Type", "application/vnd.apple.mpegurl");
             return new ResponseEntity<>(new InputStreamResource(videoService.m3u8Index(id)), headers, HttpStatus.OK);
         } catch(NotFoundException e){
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
@@ -143,7 +133,6 @@ public class VideoController {
     public ResponseEntity<InputStreamResource> ts(@PathVariable Long id, @PathVariable String ts){
         HttpHeaders headers = new HttpHeaders();
         try {
-            headers.set("Content-Type", "application/vnd.apple.mpegurl");
             return ResponseEntity.status(HttpStatus.OK).headers(headers).body(new InputStreamResource(videoService.ts(id, ts)));
         } catch (NotFoundException e) {
             return ResponseEntity.notFound().build();
@@ -151,13 +140,10 @@ public class VideoController {
     }
 
     @GetMapping("/watch")
-    public ResponseEntity<Video> watchVideoById(@RequestParam(name = "videoId") Long videoId, HttpServletRequest request, JwtAuthenticationToken jwtAuthenticationToken){
+    public ResponseEntity<Video> watchVideoById(@RequestParam(name = "videoId") Long videoId, HttpServletRequest request, Authentication authentication){
         try{
-            Jwt jwt = null;
-            if(jwtAuthenticationToken != null){
-                jwt =  jwtAuthenticationToken.getToken();
-            }
-            Video video = videoService.watchById(videoId, jwt == null ? null : Long.parseLong(jwt.getSubject()));
+            Video video = videoService.watchById(videoId,
+                    authentication == null ? null : AuthenticationUtils.getUserId(authentication));
             return ResponseEntity.ok(video);
         }catch ( NotFoundException e){
             return ResponseEntity.notFound().build();
@@ -171,7 +157,7 @@ public class VideoController {
             if(!(auth instanceof JwtAuthenticationToken)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
-            long userId =  Long.parseLong(((JwtAuthenticationToken) auth).getToken().getSubject());
+            String userId =  AuthenticationUtils.getUserId(auth);
             videoService.create(video, userId);
             return ResponseEntity.ok(null);
         }catch(NotFoundException e){
@@ -182,12 +168,12 @@ public class VideoController {
     }
 
     @PostMapping("/admin/add")
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> addVideos(@RequestParam("a") Integer amount){
         try {
             return ResponseEntity.ok(videoService.addVideos(amount));
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

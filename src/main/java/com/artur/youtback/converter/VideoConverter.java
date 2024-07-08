@@ -36,10 +36,10 @@ public class VideoConverter {
         }
         String encodedPicture = null;
         try {
-            encodedPicture = ImageUtils.encodeImageBase64(objectStorageService.getObject(videoEntity.getUser().picturePath()));
+            encodedPicture = ImageUtils.encodeImageBase64(objectStorageService.getObject(videoEntity.getUser().getPicture()));
         } catch (Exception e) {
             logger.error("Cant get user picture (path: "
-                    + videoEntity.getUser().picturePath() +
+                    + videoEntity.getUser().getPicture() +
                     ") from " + objectStorageService.getClass() + "!! User has empty thumbnail displayed");
         }
         return Video.newBuilder()

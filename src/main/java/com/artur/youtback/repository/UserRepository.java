@@ -12,8 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<UserEntity, Long> {
-    Optional<UserEntity> findByEmail(String email);
+public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     List<UserEntity> findByUsername(String username, Pageable pageable);
 
@@ -31,7 +30,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     @Modifying
     @Query("INSERT INTO Like  (userEntity ,videoEntity, timestamp) VALUES (:id, :videoId, :instant)")
-    void addLike(@Param("id") Long userId,@Param("videoId") Long videoId,@Param("instant") Instant time);
+    void addLike(@Param("id") String userId,@Param("videoId") Long videoId,@Param("instant") Instant time);
 
     @Modifying
     @Query("INSERT INTO Like (userEntity ,videoEntity, timestamp) VALUES (:#{#like.userEntity.id}, :#{#like.videoEntity.id}, :#{#like.timestamp})")

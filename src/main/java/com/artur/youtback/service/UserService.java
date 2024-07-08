@@ -29,14 +29,14 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.Nullable;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -50,8 +50,13 @@ import java.util.stream.Collectors;
 
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+
+    @Value("${application.path.user-picture}")
+    String userPicturePath;
+    @Value("${application.path.local.default-user-picture}")
+    String defaultUserPicture;
 
     @Autowired
     UserRepository userRepository;
@@ -87,7 +92,7 @@ public class UserService implements UserDetailsService {
         return userList;
     }
 
-    public User findById(Long id) throws NotFoundException {
+    public User findById(String id) throws NotFoundException {
         Optional<UserEntity> optionalUserEntity = userRepository.findById(id);
         if(optionalUserEntity.isEmpty()) throw new NotFoundException("User not Found");
 
@@ -102,26 +107,13 @@ public class UserService implements UserDetailsService {
      * @return List of founded videos.
      * @throws NotFoundException if user with specified id was not found.
      */
-    public List<Video> getAllUserVideos(Long userId, @Nullable SortOption sortOption) throws NotFoundException {
+    public List<Video> getAllUserVideos(String userId, @Nullable SortOption sortOption) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         if(sortOption != null){
             return userEntity.getUserVideos().stream().sorted(SortOptionsComparators.get(sortOption)).map(videoConverter::convertToModel).toList();
         }
 
         return userEntity.getUserVideos().stream().map(videoConverter::convertToModel).toList();
-    }
-
-    public void createAdmin() throws Exception {
-        if(userRepository.existsById(1L) || !userRepository.findByAuthority(AppAuthorities.ADMIN.name(), Pageable.ofSize(1)).isEmpty()) return;
-        try (FileInputStream pictureInputStream = new FileInputStream(AppConstants.ADMIN_PICTURE)){
-            UserEntity admin = new UserEntity();
-            admin.setUsername("Admin");
-            admin.setEmail("admin@gmail.com");
-            admin.setPassword(passwordEncoder.encode("adminadmin"));
-            admin.setAuthorities(AppAuthorities.ADMIN.name());
-            admin = userRepository.save(admin);
-           saveImage(pictureInputStream, admin.getId().toString());
-        }
     }
 
 
@@ -142,7 +134,7 @@ public class UserService implements UserDetailsService {
      * @param userId user id
      * @throws NotFoundException if user or video is not found
      */
-    public void notInterested(Long videoId, Long userId) throws NotFoundException {
+    public void notInterested(Long videoId, String userId) throws NotFoundException {
         VideoEntity videoEntity = videoRepository.findById(videoId).orElseThrow(() -> new NotFoundException("Video not found"));
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
 
@@ -158,7 +150,7 @@ public class UserService implements UserDetailsService {
      * @throws Exception if user not found or {@link ObjectStorageService} can not remove user data
      */
     @Transactional
-    public void deleteById(Long id) throws Exception {
+    public void deleteById(String id) throws Exception {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not Found"));
         userRepository.delete(userEntity);
         objectStorageService.removeObject(AppConstants.USER_PATH + userEntity.getId() + AppConstants.PROFILE_PIC_FILENAME_EXTENSION);
@@ -173,88 +165,102 @@ public class UserService implements UserDetailsService {
 
     /**Update {@link UserEntity}. The fields that could be updated:
      * <ul>
-     *     <li>Username - user`s username. Can be null
-     *     <li>Password - user`s password. Can be null
-     *     <li>Email - user`s email. Can be null
-     *     <li>Picture - user`s profile picture. Can be null
+     *     <li>Username - can be null
+     *     <li>Picture - can be null
+     *     <li>Authorities - user`s authorities</li>
      * </ul>
      * If anything of this is null, it wouldn't be changed.
      * @param user instance of {@link UserUpdateRequest}, that contains user data to update
      * @throws Exception if user was not found or if exceptions occurred in {@link ObjectStorageService}
      */
-    public void update(UserUpdateRequest user) throws Exception {
-        Optional<UserEntity> optionalUserEntity = userRepository.findById(user.userId());
+    public void update(UserUpdateRequest user, String userId) throws Exception {
+        Optional<UserEntity> optionalUserEntity = userRepository.findById(userId);
         if(optionalUserEntity.isEmpty()) throw new NotFoundException("User not Found");
 
         UserEntity userEntity = optionalUserEntity.get();
         if(user.username() != null){
             userEntity.setUsername(user.username());
         }
-        if(user.password() != null){
-            userEntity.setPassword(passwordEncoder.encode(user.password()));
-        }
-        if(user.email() != null){
-            userEntity.setEmail(user.email());
-        }
         if(user.picture() != null){
-            try(InputStream pictureInputStream = user.picture().getInputStream()){
-                saveImage(pictureInputStream, userEntity.getId().toString());
+            try (InputStream inputStream = user.picture().getInputStream()){
+                String filename = formPictureName(userId, user.picture().getOriginalFilename());
+                savePicture(inputStream, filename);
             }
         }
         userRepository.save(userEntity);
     }
 
-    public User findByEmail(String email) throws NotFoundException {
-        UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User not found"));
-        return userConverter.convertToModel(userEntity);
-    }
 
-    public void confirmEmail(String email) throws NotFoundException {
-        UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User not found"));
-        userEntity.setEmailConfirmed(true);
-        userRepository.save(userEntity);
+    private String formPictureName(String pictureId, @Nullable String originalFilename){
+        Assert.notNull(pictureId, "Picture id can not be null");
+        return AppConstants.USER_PATH + pictureId + "." + StringUtils.getFilenameExtension(originalFilename);
     }
-
 
     public User registerUser(UserCreateRequest user) throws Exception {
-        try (InputStream pictureInputStream = user.picture().getInputStream()){
-            return registerUser(userConverter.convertToEntity(user.email(), user.username(), user.password()), pictureInputStream);
+        InputStream inputStream = null;
+        try {
+            String pictureName;
+            if(user.picture() != null){
+                pictureName = formPictureName(user.id(), user.picture().getOriginalFilename());
+                inputStream = user.picture().getInputStream();
+            } else {
+                pictureName = formPictureName(user.id(), defaultUserPicture);
+                inputStream = new FileInputStream(defaultUserPicture);
+            }
+            return registerUser(user.id(), user.username(), user.authorities(), inputStream, pictureName);
+        } finally {
+            if(inputStream != null){
+                inputStream.close();
+            }
         }
     }
 
-    /**Saves {@link UserEntity} to database, compresses and uploads picture to {@link ObjectStorageService}.
-     * @param userEntity user entity to create.
-     * @param picture user`s picture input stream
+    /**Saves {@link UserEntity} to database, uploads picture to {@link ObjectStorageService} and sends message to processor service.
+     * @param  id user id, can not be null.
+     * @param  username username, can not be null.
+     * @param  authorities authorities, can not be null.
+     * @param picture user`s picture input stream, can not be null
      * @return created user, converted to DTO {@link User}.
-     * @throws Exception if user with this email already exists or if {@link ObjectStorageService} can not save picture.
+     * @throws Exception if user with this id already exists or if {@link ObjectStorageService} can not save picture.
      */
     @Transactional
-    private User registerUser(UserEntity userEntity, InputStream picture) throws Exception {
-        try {
-            if(userRepository.findByEmail(userEntity.getEmail()).isPresent()) throw new AlreadyExistException("User with this email already existed");
-
-            userEntity.setPassword(passwordEncoder.encode(userEntity.getPassword()));
-            UserEntity savedEntity = userRepository.save(userEntity);
-            saveImage(picture, userEntity.getId().toString());
-
-            return userConverter.convertToModel(savedEntity);
-        } catch (Exception e){
-            logger.error("Failed to create a new user cause: " + e);
-            throw new Exception("Failed to create a new user cause: " + e);
+    private User registerUser(String id,
+                              String username,
+                              String authorities,
+                              InputStream picture,
+                              String pictureName) throws Exception {
+        if(userRepository.existsById(id)){
+            logger.warn("User with this id [" + id + "] already exists");
+            return null;
         }
+        return userConverter.convertToModel(
+                userRepository.save(
+                        new UserEntity(
+                                id,
+                                username,
+                                savePicture(picture, pictureName),
+                                authorities
+                        )
+                ));
     }
 
     /**Uploads image to {@link ObjectStorageService}, sends message to Kafka for processing this image and waits until processing done.
-     * @param inputStream image input stream
-     * @param userId user`s id
+     * @param inputStream input stream of the picture
+     * @param pictureName name of the image by which it will be saved
      * @throws Exception - if can not compress this image or if {@link ObjectStorageService} can not upload this image.
      */
-    public void saveImage(InputStream inputStream, String userId) throws Exception {
-        objectStorageService.putObject(inputStream, AppConstants.USER_PATH + userId + AppConstants.PROFILE_PIC_FILENAME_EXTENSION);
-        kafkaTemplate.send(AppConstants.USER_PICTURE_INPUT_TOPIC, userId,AppConstants.USER_PATH + userId + AppConstants.PROFILE_PIC_FILENAME_EXTENSION);
-        if(!processingEventMediator.userPictureProcessingWait(userId)){
+    private String savePicture(InputStream inputStream, String pictureName) throws Exception {
+        Assert.notNull(inputStream, "Input stream can not be null");
+        Assert.notNull(pictureName, "Picture name can not be null");
+
+        objectStorageService.putObject(inputStream, pictureName);
+        //TODO: create new service for kafka, that will take on the task of waiting for processing or use ReplyingKafkaTemplate
+        String kafkaKey = new Base64StringKeyGenerator(Base64.getEncoder()).generateKey();
+        kafkaTemplate.send(AppConstants.USER_PICTURE_INPUT_TOPIC,kafkaKey ,pictureName);
+        if(!processingEventMediator.userPictureProcessingWait(kafkaKey)){
             throw new ProcessingException("User picture processing failed");
         }
+        return pictureName;
     }
 
     /**Adds search option in search history. Removes extra options if there are more than specified
@@ -263,9 +269,9 @@ public class UserService implements UserDetailsService {
      * @param searchOption search option. Anything that user searched.
      * @throws NotFoundException if user with this id was not found.
      */
-    public void addSearchOption(Long id, String searchOption) throws NotFoundException {
+    public void addSearchOption(String id, String searchOption) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() ->  new NotFoundException("User not found"));
-
+        System.out.println("option " + searchOption);
         if(userEntity.getSearchHistory() == null) userEntity.setSearchHistory(new ArrayList<>());                               //if adding at the first time
 
         List<SearchHistory> searchHistoryList = userEntity.getSearchHistory();
@@ -291,7 +297,7 @@ public class UserService implements UserDetailsService {
      * @param videoId video that liked user
      * @throws NotFoundException if user or video not found
      */
-    public void likeVideo(Long userId, Long videoId) throws NotFoundException {
+    public void likeVideo(String userId, Long videoId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         VideoEntity videoEntity = videoRepository.findById(videoId).orElseThrow(() -> new NotFoundException("Video not found"));
         Set<Like> likedVideos = userEntity.getLikes();
@@ -313,7 +319,7 @@ public class UserService implements UserDetailsService {
      * @param videoId video id that disliked by user.
      * @throws NotFoundException - if user or video not found
      */
-    public void dislikeVideo(Long userId, Long videoId) throws NotFoundException {
+    public void dislikeVideo(String userId, Long videoId) throws NotFoundException {
         if(!userRepository.existsById(userId)) throw new NotFoundException("User not found");
         if(!videoRepository.existsById(videoId)) throw new NotFoundException("Video not found");
         UserEntity userEntity = userRepository.getReferenceById(userId);
@@ -333,7 +339,7 @@ public class UserService implements UserDetailsService {
      * @return videos that user have watched.
      * @throws NotFoundException if user not found
      */
-    public List<Video> getWatchHistory(Long userId) throws NotFoundException {
+    public List<Video> getWatchHistory(String userId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(()-> new NotFoundException("User not found, id: " + userId));
         List<Video> result = new ArrayList<>();
         for (WatchHistory watchHistory :userEntity.getWatchHistory()) {
@@ -347,7 +353,7 @@ public class UserService implements UserDetailsService {
      * @return List of users founded
      * @throws NotFoundException if user was not found
      */
-    public List<User> getUserSubscribes(Long userId) throws NotFoundException {
+    public List<User> getUserSubscribes(String userId) throws NotFoundException {
         UserEntity user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User with id " + userId + " was not found"));
         return user.getSubscribes().stream().map(userConverter::convertToModel).toList();
     }
@@ -357,7 +363,7 @@ public class UserService implements UserDetailsService {
      * @return List of videos founded
      * @throws NotFoundException if user was not found
      */
-    public List<Video> getUserLikes(Long userId) throws NotFoundException {
+    public List<Video> getUserLikes(String userId) throws NotFoundException {
         UserEntity user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User with id " + userId + " was not found"));
         return user.getLikes().stream().map(Like::getVideoEntity).map(videoConverter::convertToModel).toList();
     }
@@ -367,7 +373,7 @@ public class UserService implements UserDetailsService {
      * @param searchOption search option to delete
      * @throws NotFoundException if user or search option not found
      */
-    public void deleteSearchOption(Long userId, String searchOption) throws NotFoundException {
+    public void deleteSearchOption(String userId, String searchOption) throws NotFoundException {
         Optional<UserEntity> optionalUserEntity = userRepository.findById(userId);
         if(optionalUserEntity.isEmpty()) throw new NotFoundException("User not found");
 
@@ -390,7 +396,7 @@ public class UserService implements UserDetailsService {
      * @return true if user liked video, otherwise false
      * @throws NotFoundException - if user or video not found
      */
-    public boolean hasUserLikedVideo(Long userId, Long videoId) throws NotFoundException {
+    public boolean hasUserLikedVideo(String userId, Long videoId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         if(!videoRepository.existsById(videoId)) throw new NotFoundException("Video not found");
         return userEntity.getLikes().stream().anyMatch(like -> like.getVideoEntity().getId().equals(videoId));
@@ -401,7 +407,7 @@ public class UserService implements UserDetailsService {
      * @param subscribedChannelId user id that being subscribed
      * @throws NotFoundException if one of users not found
      */
-    public void subscribeById(Long userId, Long subscribedChannelId) throws NotFoundException {
+    public void subscribeById(String userId, String subscribedChannelId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         UserEntity subscribedChannel = userRepository.findById(subscribedChannelId).orElseThrow(() ->  new NotFoundException("Subscribed channel not found"));
 
@@ -415,7 +421,7 @@ public class UserService implements UserDetailsService {
      * @param subscribedChannelId user id that will be unsubscribed
      * @throws NotFoundException if one of users not found
      */
-    public void unsubscribeById(Long userId, Long subscribedChannelId) throws NotFoundException {
+    public void unsubscribeById(String userId, String subscribedChannelId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         if(!userRepository.existsById(userId)) throw new NotFoundException("User not found");
 
@@ -432,7 +438,7 @@ public class UserService implements UserDetailsService {
      * @return true if user subscribed on another, otherwise false
      * @throws NotFoundException - if user not found
      */
-    public boolean hasUserSubscribedChannel(Long userId, Long subbedChannelId) throws NotFoundException {
+    public boolean hasUserSubscribedChannel(String userId, String subbedChannelId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
 
         return userEntity.getSubscribes().stream().anyMatch((subbedChannel) -> subbedChannel.getId().equals(subbedChannelId));
@@ -454,12 +460,11 @@ public class UserService implements UserDetailsService {
         ThreadPoolExecutor executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(12);
         Runnable task = () -> {
             int index = (int)Math.floor(Math.random() * names.length);
+            String uuid = genUserId();
             String username = names[index];
-            String email = (System.currentTimeMillis() + index) + username + "@gmail.com";
             File profilePic = profilePics[(int)Math.floor(Math.random() * profilePics.length)];
-            String password =  passwordEncoder.encode("password");
             try (InputStream pictureInputStream = new FileInputStream(profilePic)){
-                registerUser(userConverter.convertToEntity(email, username, password), pictureInputStream);
+                registerUser(uuid, username, AppAuthorities.ROLE_USER.name(), pictureInputStream, AppConstants.USER_PATH + profilePic.getName());
             } catch (Exception e) {
                 createdUsers.decrementAndGet();
                 logger.error(e.getMessage());
@@ -473,13 +478,14 @@ public class UserService implements UserDetailsService {
         return createdUsers.get();
     }
 
-    @Override
-    @Transactional
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
-        UserEntity userEntity = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return userConverter.convertToModel(userEntity);
+    private String genUserId(){
+        String id;
+        do{
+            id = UUID.randomUUID().toString();
+        } while(userRepository.existsById(id));
+        return id;
     }
+
 
     private static class Tools{
 

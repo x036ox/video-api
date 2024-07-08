@@ -58,7 +58,6 @@ public interface VideoRepository extends JpaRepository<VideoEntity, Long> {
      * that user are interested in.
      * @param userId user id for which should be recommendations found. Can not be null.
      * @param timestamp the range from {@code Instant.now()} in which video is considered popular. Can not be null
-     * @param exceptions video ids that should be excluded. Can not be null or empty.
      * @param size the size of recommendations
      * @return List of founded recommendations
      */
@@ -73,7 +72,7 @@ public interface VideoRepository extends JpaRepository<VideoEntity, Long> {
             "ORDER BY VALUE(um.languages) DESC, VALUE(um.categories) DESC, COUNT(*) DESC"
     )
     List<VideoEntity> findRecommendationsForUser(
-            @Param("userId") Long userId,
+            @Param("userId") String userId,
             @Param("timestamp") Instant timestamp,
             Pageable size);
 
@@ -94,7 +93,7 @@ public interface VideoRepository extends JpaRepository<VideoEntity, Long> {
             "group by v.id " +
             "order by ul.repeats desc, uc.repeats desc, COUNT(*) DESC;"
     )
-    List<Long> getFindIdsForUser(@Param("userId") Long userId,
+    List<Long> getFindIdsForUser(@Param("userId") String userId,
                                  @Param("timestamp") Instant timestamp,
                                  @Param("exceptions") @NotEmpty Set<Long> exceptions,
                                  Pageable size);
@@ -115,7 +114,7 @@ public interface VideoRepository extends JpaRepository<VideoEntity, Long> {
             "group by v.id " +
             "order by ul.repeats desc, uc.repeats desc, COUNT(*) DESC;"
     )
-    List<Long> getFindIdsForUser(@Param("userId") Long userId,
+    List<Long> getFindIdsForUser(@Param("userId") String userId,
                                  @Param("timestamp") Instant timestamp,
                                  Pageable size);
 
@@ -127,7 +126,7 @@ public interface VideoRepository extends JpaRepository<VideoEntity, Long> {
      * @param size the size of recommendations
      * @return List of founded recommendations
      */
-    default List<Long> findRecommendationsTestIds(Long userId, Instant timestamp, Set<Long> exceptions, Pageable size){
+    default List<Long> findRecommendationsTestIds(String userId, Instant timestamp, Set<Long> exceptions, Pageable size){
         if(exceptions.isEmpty()){
             return this.getFindIdsForUser(userId, timestamp, size);
         } else{

@@ -40,6 +40,12 @@ server:
     key-store: classpath:certs/domain.p12
     key-store-password: 5122
 
+application:
+  path:
+    local:
+      default-user-picture: src/main/resources/picture/Default.png
+    user-picture: "/user/picture"
+
 
 minio:
   bucket:

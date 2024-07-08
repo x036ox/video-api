@@ -16,11 +16,11 @@ public class Video implements Serializable {
         private String uploadDate;
         private String category;
         private String description;
-        private Long channelId;
+        private String channelId;
         private String creatorPicture;
         private String creatorName;
 
-        public Video(Long id, String title, String duration,String thumbnail, String views, Integer likes, String uploadDate, String description, Long channelId, String creatorPicture, String creatorName, String category) {
+        public Video(Long id, String title, String duration,String thumbnail, String views, Integer likes, String uploadDate, String description, String channelId, String creatorPicture, String creatorName, String category) {
                 this.id = id;
                 this.title = title;
                 this.duration = duration;
@@ -75,7 +75,7 @@ public class Video implements Serializable {
                 return description;
         }
 
-        public Long getChannelId() {
+        public String getChannelId() {
                 return channelId;
         }
 
@@ -105,7 +105,7 @@ public class Video implements Serializable {
                 VideoBuilder views(String views);
                 VideoBuilder likes(Integer likes);
                 VideoBuilder uploadDate(String uploadDate);
-                VideoBuilder channelId(Long channelId);
+                VideoBuilder channelId(String channelId);
                 VideoBuilder creatorName(String creatorName);
                 VideoBuilder creatorPicture(String creatorPicture);
 
@@ -169,7 +169,7 @@ public class Video implements Serializable {
                 }
 
                 @Override
-                public VideoBuilder channelId(Long channelId) {
+                public VideoBuilder channelId(String channelId) {
                         this.video.channelId = channelId;
                         return this;
                 }

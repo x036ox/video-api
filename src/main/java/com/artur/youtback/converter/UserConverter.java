@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,32 +33,29 @@ public class UserConverter {
                 .sorted(new SearchHistoryComparator()).map(SearchHistory::getSearchOption).toList();
         String encodedPicture = null;
         try {
-            encodedPicture = ImageUtils.encodeImageBase64(objectStorageService.getObject(userEntity.picturePath()));
+            encodedPicture = ImageUtils.encodeImageBase64(objectStorageService.getObject(userEntity.getPicture()));
         } catch (Exception e) {
             logger.error("Cant get user picture (path: "
-                    + userEntity.picturePath() +
-                    ") from " + objectStorageService.getClass() + "!! User has empty thumbnail displayed");
+                    + userEntity.getPicture() +
+                    ") from " + objectStorageService.getClass() + "!! User has empty thumbnail displayed", e);
         }
-        return new User(
-                userEntity.getId(),
-                userEntity.getEmail(),
-                userEntity.getUsername(),
-                userEntity.getPassword(),
-                encodedPicture,
-                Integer.toString(subscribers.size()).concat(subscribers.size() == 1 ? " subscriber" : " subscribers"),
-                userEntity.getUserVideos().stream().map(videoConverter::convertToModel).collect(Collectors.toList()),
-                searchOptionList,
-                userEntity.getAuthorities()
-        );
+        return User.builder()
+                .id(userEntity.getId())
+                .username(userEntity.getUsername())
+                .picture(encodedPicture)
+                .subscribers(Integer.toString(subscribers.size()).concat(subscribers.size() == 1 ? " subscriber" : " subscribers"))
+                .userVideos(userEntity.getUserVideos().stream().map(videoConverter::convertToModel).collect(Collectors.toList()))
+                .searchHistory(userEntity.getSearchHistory().stream().map(SearchHistory::getSearchOption).toList())
+                .authorities(userEntity.getAuthorities())
+                .build();
     }
 
-    public UserEntity convertToEntity(String email, String username, String password){
+    public UserEntity convertToEntity(User user) throws IOException {
         return new UserEntity(
-                null,
-                email,
-                username,
-                password,
-                AppAuthorities.USER.toString()
+                user.getId(),
+                user.getUsername(),
+                user.getPicture(),
+                AppAuthorities.ROLE_USER.toString()
         );
     }
 }

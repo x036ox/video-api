@@ -1,32 +1,29 @@
 package com.artur.youtback.config;
 
-import com.artur.youtback.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.util.Collection;
+import java.util.HashSet;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(jsr250Enabled = true)
 public class SecurityConfig{
 
-
-
-    @Autowired
-    public void configure(AuthenticationManagerBuilder auth, UserService userService){
-        try {
-            auth.userDetailsService(userService);
-        }catch (Exception e){
-        }
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder(){
@@ -44,16 +41,25 @@ public class SecurityConfig{
                 })
                 .oauth2ResourceServer(httpSecurityOAuth2ResourceServerConfigurer ->
                         httpSecurityOAuth2ResourceServerConfigurer
-                                .jwt(Customizer.withDefaults())
-
-                )
+                                .jwt(jwtConfigurer ->
+                                        jwtConfigurer.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .httpBasic(Customizer.withDefaults())
                 .build();
     }
-    //TODO: transfer minio to another service
-    //TODO: implement post-auth endpoint
+    //TODO: move VideoEntity and related to another microservice
 
-
+    private JwtAuthenticationConverter jwtAuthenticationConverter(){
+        Converter<Jwt, Collection<GrantedAuthority>> grantedAuthoritiesConverter = jwt ->{
+            JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter1 = new JwtGrantedAuthoritiesConverter();
+            Collection<GrantedAuthority> result = new HashSet<>(grantedAuthoritiesConverter1.convert(jwt));
+            Collection<String> roles = jwt.getClaim("roles");
+            result.addAll(roles.stream().map(SimpleGrantedAuthority::new).toList());
+            return result;
+        };
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        return jwtAuthenticationConverter;
+    }
 
 
 }

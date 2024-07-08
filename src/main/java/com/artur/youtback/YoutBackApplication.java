@@ -22,7 +22,7 @@ public class YoutBackApplication {
 	@Bean
 	CommandLineRunner commandLineRunner(UserService userService){
 		return args -> {
-			userService.createAdmin();
+			//
 		};
 	}
 }

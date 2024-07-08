@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -65,7 +66,7 @@ class VideoServiceTest extends YoutBackApplicationTests {
                 "Music",
                 imageFile,
                 videoFile,
-                20L).orElseThrow(() -> new RuntimeException("User did not created")));
+                UUID.randomUUID().toString()).orElseThrow(() -> new RuntimeException("User did not created")));
         long id = videoEntity.getId();
         verify(objectStorageService, times(2)).putObject(any(InputStream.class), anyString());       //uploaded thumbnail and video
         verify(processingServiceTemplate, times(1)).send(eq(AppConstants.THUMBNAIL_INPUT_TOPIC), anyString(), anyString());  //send message to process
@@ -106,7 +107,7 @@ class VideoServiceTest extends YoutBackApplicationTests {
     @Test
     public void watchByIdTest() throws NotFoundException {
         long testVideoId = 139L;
-        UserEntity userEntity = userRepository.findByAuthority(AppAuthorities.ADMIN.name(), Pageable.ofSize(1)).getFirst();
+        UserEntity userEntity = userRepository.findByAuthority(AppAuthorities.ROLE_ADMIN.name(), Pageable.ofSize(1)).getFirst();
         VideoEntity videoEntity = videoRepository.findById(testVideoId).orElseThrow(() -> new RuntimeException("Video not found"));
         String videoCategory = videoEntity.getVideoMetadata().getCategory();
         String videoLanguage = videoEntity.getVideoMetadata().getLanguage();

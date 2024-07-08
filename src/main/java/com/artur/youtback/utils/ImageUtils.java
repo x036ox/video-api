@@ -26,6 +26,12 @@ public class ImageUtils {
         }
     }
 
+    public static String convertToString(String userId){
+        //TODO: implement this method
+        //TODO: make this class non-static
+        return "";
+    }
+
 
     public static String encodeImageBase64(InputStream inputStream){
         try(inputStream){

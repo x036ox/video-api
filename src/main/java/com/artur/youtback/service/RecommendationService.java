@@ -60,7 +60,7 @@ public class RecommendationService {
      * @return List of founded recommendations
      * @throws NotFoundException if user id is not null, but user with this id is not found
      */
-    public List<VideoEntity> getRecommendationsFor(@Nullable Long userId,@NotNull Integer page, @NotEmpty String[] browserLanguages, int size) throws NotFoundException {
+    public List<VideoEntity> getRecommendationsFor(@Nullable String userId,@NotNull Integer page, @NotEmpty String[] browserLanguages, int size) throws NotFoundException {
         final int RECS_SIZE = Math.min(size, AppConstants.MAX_VIDEOS_PER_REQUEST);
         List <VideoEntity> videos = new ArrayList<>();
         if(userId != null){
@@ -101,7 +101,7 @@ public class RecommendationService {
      * @param size size of recommendations result
      * @return List of found recommendations
      */
-    private List<VideoEntity> getByCategoriesAndLanguages(Long userId, int page, int size){
+    private List<VideoEntity> getByCategoriesAndLanguages(String userId, int page, int size){
         return videoRepository.findRecommendationsForUser(userId,
                 Instant.now().minus(AppConstants.POPULARITY_DAYS, ChronoUnit.DAYS),
                 PageRequest.of(page, size));

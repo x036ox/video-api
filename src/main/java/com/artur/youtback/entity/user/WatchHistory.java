@@ -20,8 +20,8 @@ public class WatchHistory {
 
      private LocalDateTime date;
 
-    public WatchHistory(Long userId, UserEntity userEntity, Long videoId) {
-        this.id = userId;
+    public WatchHistory(Long id, UserEntity userEntity, Long videoId) {
+        this.id = id;
         this.userEntity = userEntity;
         this.videoId = videoId;
         this.date = LocalDateTime.now();

@@ -14,6 +14,16 @@ services:
 #    environment:
 #      - SPRING_PROFILES_ACTIVE=prod
 
+  auth-server:
+    image: artur110/auth-server
+    restart: unless-stopped
+    environment:
+      - SPRING_ACTIVE_PROFILES=prod
+    ports:
+      - "8090:8090"
+    depends_on:
+      - db
+
   media-processor:
     image: artur110/media-processor
     restart: unless-stopped

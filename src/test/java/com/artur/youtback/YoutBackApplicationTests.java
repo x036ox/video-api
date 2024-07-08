@@ -1,9 +1,10 @@
 package com.artur.youtback;
 
-import com.artur.youtback.entity.user.UserMetadata;
 import com.artur.youtback.exception.NotFoundException;
 import com.artur.youtback.repository.UserMetadataRepository;
 import com.artur.youtback.service.RecommendationService;
+import com.artur.youtback.service.UserService;
+import com.artur.youtback.service.VideoService;
 import io.minio.MinioClient;
 import jakarta.transaction.Transactional;
 import org.apache.kafka.clients.consumer.MockConsumer;
@@ -37,19 +38,22 @@ public class YoutBackApplicationTests {
 	@Autowired
     UserMetadataRepository userMetadataRepository;
 	@Autowired
+	private UserService userService;
+	@Autowired
+	private VideoService videoService;
+	@Autowired
     RecommendationService recommendationService;
+
+	protected void prepopulateDatabase() throws Exception {
+		userService.addUsers(2);
+		videoService.addVideos(3);
+	}
 
 	@Test
 	public void recommendationsTest() throws NotFoundException {
         assertFalse(recommendationService.getRecommendationsFor(null, 0, new String[]{"ru"}, 10).isEmpty());
     }
 
-	@Test
-	@Transactional
-	public void categoriesTest(){
-		UserMetadata userMetadata = userMetadataRepository.findById(20L).orElseThrow( () -> new RuntimeException("User not found"));
-		assertFalse(userMetadata.getCategories().isEmpty());
-	}
 
 
 
