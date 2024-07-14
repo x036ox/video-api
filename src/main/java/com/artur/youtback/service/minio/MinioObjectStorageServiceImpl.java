@@ -21,14 +21,14 @@ public class MinioObjectStorageServiceImpl implements ObjectStorageService {
     MinioConfig minioConfig;
 
     @Override
-    public ObjectWriteResponse putObject(InputStream objectInputStream, String objectName) throws Exception {
+    public String putObject(InputStream objectInputStream, String objectName) throws Exception {
         return minioClient.putObject(
                 PutObjectArgs.builder()
                         .bucket(minioConfig.getStoreBucket())
                         .object(objectName)
                         .stream(objectInputStream, -1, 5242880)
                         .build()
-        );
+        ).object();
     }
 
     @Override
@@ -51,17 +51,17 @@ public class MinioObjectStorageServiceImpl implements ObjectStorageService {
     }
 
     @Override
-    public List<Item> listFiles(String prefix) throws Exception {
+    public List<String> listFiles(String prefix) throws Exception {
         if(!prefix.endsWith("/")){
             prefix += "/";
         }
-        List<Item> results = new ArrayList<>();
+        List<String> results = new ArrayList<>();
         for (Result<Item> itemResult :
                 minioClient.listObjects(
                         ListObjectsArgs.builder().bucket(minioConfig.getStoreBucket()).prefix(prefix).recursive(false).build())) {
             Item i = itemResult.get();
             if (i.isDir()) continue;
-            results.add(i);
+            results.add(i.objectName());
         }
         return results;
     }
@@ -87,5 +87,15 @@ public class MinioObjectStorageServiceImpl implements ObjectStorageService {
                     .object(item.get().objectName())
                     .build());
         }
+    }
+
+    @Override
+    public String getObjectUrl(String objectName) throws Exception {
+        return minioClient.getPresignedObjectUrl(
+                GetPresignedObjectUrlArgs.builder()
+                        .bucket(minioConfig.getStoreBucket())
+                        .object(objectName)
+                        .build()
+        );
     }
 }

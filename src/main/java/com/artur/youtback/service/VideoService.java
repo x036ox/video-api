@@ -340,8 +340,8 @@ public class VideoService {
         }
         if(updateRequest.video() != null){
             for(var el : objectStorageService.listFiles(AppConstants.VIDEO_PATH + videoEntity.getId() + "/")){
-                if(!el.objectName().contains(AppConstants.THUMBNAIL_FILENAME)){
-                    objectStorageService.removeObject(el.objectName());
+                if(!el.contains(AppConstants.THUMBNAIL_FILENAME)){
+                    objectStorageService.removeObject(el);
                 }
             }
             try (InputStream videoInputStream = updateRequest.video().getInputStream()) {
