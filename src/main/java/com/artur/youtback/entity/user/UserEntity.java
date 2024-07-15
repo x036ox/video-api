@@ -44,8 +44,8 @@ public class UserEntity {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userEntity")
     private List<WatchHistory> watchHistory = new ArrayList<>();
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "id")
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "userEntity")
+    @PrimaryKeyJoinColumn
     private UserMetadata userMetadata;
 
     public UserEntity(String id,  String username, String picture, String authorities) {
@@ -57,6 +57,7 @@ public class UserEntity {
     }
 
     public UserEntity() {
+        this.userMetadata = new UserMetadata(this);
     }
 
     @PostLoad

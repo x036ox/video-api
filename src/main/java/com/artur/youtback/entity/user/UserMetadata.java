@@ -11,10 +11,9 @@ import java.util.Map;
 public class UserMetadata {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
 
-    @OneToOne(mappedBy = "userMetadata")
+    @OneToOne
     @MapsId
     @JoinColumn(name = "id")
     private UserEntity userEntity;

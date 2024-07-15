@@ -8,7 +8,7 @@ public class VideoMetadata {
     @Id
     private Long videoId;
 
-    @OneToOne(mappedBy = "videoMetadata")
+    @OneToOne
     @MapsId
     @JoinColumn(name = "id")
     private VideoEntity videoEntity;

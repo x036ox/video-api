@@ -233,15 +233,14 @@ public class UserService {
             logger.warn("User with this id [" + id + "] already exists");
             return null;
         }
-        return userConverter.convertToModel(
-                userRepository.save(
-                        new UserEntity(
-                                id,
-                                username,
-                                savePicture(picture, pictureName),
-                                authorities
-                        )
-                ));
+        UserEntity userEntity = new UserEntity(
+                id,
+                username,
+                savePicture(picture, pictureName),
+                authorities
+        );
+        userRepository.save(userEntity);
+        return userConverter.convertToModel(userEntity);
     }
 
     /**Uploads image to {@link ObjectStorageService}, sends message to Kafka for processing this image and waits until processing done.

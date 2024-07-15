@@ -260,8 +260,9 @@ public class VideoService {
         try {
             Integer duration = (int)Float.parseFloat(MediaUtils.getDuration(video));
             String language = languageDetector.detect(title).getLanguage();
-            VideoEntity savedEntity = videoRepository.save(videoConverter.convertToEntity(title, description, userEntity));
-            videoMetadataRepository.save(new VideoMetadata(savedEntity, language, duration, category));
+            VideoEntity videoEntity = videoConverter.convertToEntity(title, description, userEntity);
+            videoEntity.setVideoMetadata(new VideoMetadata(videoEntity, language, duration, category));
+            videoRepository.save(videoEntity);
 
             folder = AppConstants.VIDEO_PATH + savedEntity.getId();
             objectStorageService.putObject(thumbnail, folder + "/" + AppConstants.THUMBNAIL_FILENAME);

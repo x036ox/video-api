@@ -29,7 +29,7 @@ public class VideoEntity {
     private UserEntity user;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "videoEntity")
     private Set<Like> likes = new HashSet<>();
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "videoEntity")
     @PrimaryKeyJoinColumn
     private VideoMetadata videoMetadata;
 
