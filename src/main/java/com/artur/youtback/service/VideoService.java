@@ -1,5 +1,6 @@
 package com.artur.youtback.service;
 
+import com.artur.youtback.config.KafkaConfig;
 import com.artur.youtback.converter.VideoConverter;
 import com.artur.youtback.entity.Like;
 import com.artur.youtback.entity.VideoEntity;
@@ -9,7 +10,6 @@ import com.artur.youtback.entity.user.UserMetadata;
 import com.artur.youtback.entity.user.WatchHistory;
 import com.artur.youtback.exception.NotFoundException;
 import com.artur.youtback.exception.ProcessingException;
-import com.artur.youtback.mediator.ProcessingEventMediator;
 import com.artur.youtback.model.video.Video;
 import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;
@@ -27,11 +27,13 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
+import org.springframework.kafka.requestreply.RequestReplyFuture;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -74,13 +76,11 @@ public class VideoService {
     @Autowired
     VideoConverter videoConverter;
     @Autowired
-    KafkaTemplate<String, String> kafkaTemplate;
-    @Autowired
     LanguageDetector languageDetector;
     @Autowired
-    ProcessingEventMediator processingEventMediator;
-    @Autowired
     UserMetadataRepository userMetadataRepository;
+    @Autowired
+    ReplyingKafkaTemplate<String, String, Boolean> replyingKafkaTemplate;
 
 
     public List<Video> findAll(SortOption sortOption) throws NotFoundException {
@@ -222,7 +222,7 @@ public class VideoService {
         }
     }
 
-    public Optional<VideoEntity> create(VideoCreateRequest video, String userId)  throws Exception{
+    public VideoEntity create(VideoCreateRequest video, String userId)  throws Exception{
         try(
                 InputStream thumbnailInputStream = video.thumbnail().getInputStream();
                 ByteArrayInputStream videoInputStream = new ByteArrayInputStream(video.video().getBytes());
@@ -231,7 +231,7 @@ public class VideoService {
         }
     }
 
-    public Optional<VideoEntity> create(String title, String description, String category, File thumbnail, File video, String userId)  throws Exception{
+    public VideoEntity create(String title, String description, String category, File thumbnail, File video, String userId)  throws Exception{
         try(
                 InputStream thumbnailInputStream = new FileInputStream(thumbnail);
                 ByteArrayInputStream videoInputStream = new ByteArrayInputStream(Files.readAllBytes(video.toPath()));
@@ -253,7 +253,7 @@ public class VideoService {
      * @throws Exception if user not found or failed uploading to {@link ObjectStorageService} or failed to parse duration.
      */
     @Transactional
-    private Optional<VideoEntity> create(String title, String description, String category, InputStream thumbnail, ByteArrayInputStream video, String userId) throws Exception{
+    private VideoEntity create(String title, String description, String category, InputStream thumbnail, ByteArrayInputStream video, String userId) throws Exception{
         //TODO: avoid to use ByteArrayInputStream, in order not to store whole video in memory
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         String folder = null;
@@ -264,29 +264,32 @@ public class VideoService {
             videoEntity.setVideoMetadata(new VideoMetadata(videoEntity, language, duration, category));
             videoRepository.save(videoEntity);
 
-            folder = AppConstants.VIDEO_PATH + savedEntity.getId();
-            objectStorageService.putObject(thumbnail, folder + "/" + AppConstants.THUMBNAIL_FILENAME);
-            kafkaTemplate.send(AppConstants.THUMBNAIL_INPUT_TOPIC, savedEntity.getId().toString(), folder + "/" + AppConstants.THUMBNAIL_FILENAME);
+            folder = AppConstants.VIDEO_PATH + videoEntity.getId();
+            String thumbnailFilename = folder + "/" + AppConstants.THUMBNAIL_FILENAME;
+            objectStorageService.putObject(thumbnail, thumbnailFilename);
+            RequestReplyFuture<String, String, Boolean> thumbnailResponseFuture = replyingKafkaTemplate.sendAndReceive(
+                    new ProducerRecord<>(KafkaConfig.THUMBNAIL_INPUT_TOPIC, thumbnailFilename)
+            );
 
             video.reset();
-            String videoFilename = AppConstants.VIDEO_PATH + savedEntity.getId() + "/" + "index.mp4";
+            String videoFilename = AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + "index.mp4";
             objectStorageService.putObject(video, videoFilename);
-            kafkaTemplate.send(AppConstants.VIDEO_INPUT_TOPIC, savedEntity.getId().toString(),  videoFilename);
+            RequestReplyFuture<String, String, Boolean> videoResponseFuture = replyingKafkaTemplate.sendAndReceive(
+                    new ProducerRecord<>(KafkaConfig.VIDEO_INPUT_TOPIC, videoFilename)
+            );
 
-            if(!processingEventMediator.thumbnailProcessingWait(savedEntity.getId().toString())){
-                throw new ProcessingException("Thumbnail processing failed");
+            if(!thumbnailResponseFuture.get(5, TimeUnit.MINUTES).value() || !videoResponseFuture.get(5, TimeUnit.MINUTES).value()){
+                throw new ProcessingException("Received false from processing microservice");
             }
-            if(!processingEventMediator.videoProcessingWait(savedEntity.getId().toString())){
-                throw new ProcessingException("Video processing failed");
-            }
-            logger.info("Video {} successfully created", savedEntity.getId());
-            return Optional.of(savedEntity);
+
+            logger.info("Video {} successfully created", videoEntity.getId());
+            return videoEntity;
         } catch (Exception e) {
-            logger.error("Could not create video uploaded from client cause: " + e);
+            logger.error("Could not create video uploaded from client", e);
             if(folder != null){
                 objectStorageService.removeFolder(folder);
             }
-            throw new Exception("Could not create video uploaded from client cause: " + e);
+            throw e;
         }
     }
 
@@ -333,9 +336,13 @@ public class VideoService {
         if(updateRequest.thumbnail() != null){
             try (InputStream thumbnailInputStream = updateRequest.thumbnail().getInputStream()){
                 objectStorageService.putObject(thumbnailInputStream, AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + AppConstants.THUMBNAIL_FILENAME);
-                kafkaTemplate.send(AppConstants.THUMBNAIL_INPUT_TOPIC, videoEntity.getId().toString(), AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + AppConstants.THUMBNAIL_FILENAME);
-                if(!processingEventMediator.thumbnailProcessingWait(videoEntity.getId().toString())){
-                    throw new ProcessingException("Thumbnail processing failed");
+                RequestReplyFuture<String, String, Boolean> response = replyingKafkaTemplate.sendAndReceive(
+                        new ProducerRecord<>(
+                                KafkaConfig.THUMBNAIL_INPUT_TOPIC,
+                                AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + AppConstants.THUMBNAIL_FILENAME)
+                );
+                if(!response.get().value()){
+                    throw new ProcessingException("Could not process thumbnail");
                 }
             }
         }
@@ -348,9 +355,13 @@ public class VideoService {
             try (InputStream videoInputStream = updateRequest.video().getInputStream()) {
                 String videoFilename = AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + "index.mp4";
                 objectStorageService.putObject(videoInputStream, videoFilename);
-                kafkaTemplate.send(AppConstants.VIDEO_INPUT_TOPIC,videoEntity.getId().toString() , videoFilename);
-                if(!processingEventMediator.videoProcessingWait(videoEntity.getId().toString())){
-                    throw new ProcessingException("Video processing failed");
+                RequestReplyFuture<String, String, Boolean> response = replyingKafkaTemplate.sendAndReceive(
+                        new ProducerRecord<>(
+                                KafkaConfig.VIDEO_INPUT_TOPIC,
+                                videoFilename)
+                );
+                if(!response.get(5, TimeUnit.MINUTES).value()){
+                    throw new ProcessingException("Could not process video");
                 }
             }
         }
@@ -359,17 +370,6 @@ public class VideoService {
         }
         videoRepository.save(videoEntity);
     }
-
-//    public void testMethod(){
-//        //преобразовать в новый формат все видео
-//        long start = System.currentTimeMillis();
-//        try {
-//            System.out.println("is empty: " + videoRepository.findBySomeFieldNotIn(List.of()).isEmpty());
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-//        logger.info("Refactoring completed in " + (System.currentTimeMillis() - start) + "ms");
-//    }
 
     /**Creates specified amount of videos. Video data will be picked randomly of
      * already specified lists of titles, categories, etc. Thumbnails and videos to create stored in file system.
@@ -411,7 +411,7 @@ public class VideoService {
                 String title = titles[categoryIndex][(int)Math.floor(Math.random() * titles[categoryIndex].length)] + " by " + user.getUsername();
                 try {
                     VideoEntity createdVideo = create(title, description, category, thumbnails[categoryIndex][(int)Math.floor(Math.random() * thumbnails[categoryIndex].length)],
-                            videos[categoryIndex][(int)Math.floor(Math.random() * videos[categoryIndex].length)], user.getId()).orElseThrow(()-> new RuntimeException("user not found"));
+                            videos[categoryIndex][(int)Math.floor(Math.random() * videos[categoryIndex].length)], user.getId());
                     int likesToAdd = (int)Math.floor(Math.random() * users.size());
                     Set<String> exceptions = new HashSet<>();
                     for (int i = 0;i < likesToAdd;i++){

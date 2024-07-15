@@ -37,6 +37,7 @@ build/
 *.key
 *.pem
 *.env
+*.log
 
 ### profile properties
 src/main/resources/application-dev.yml

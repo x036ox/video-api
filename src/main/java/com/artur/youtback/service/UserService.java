@@ -1,5 +1,6 @@
 package com.artur.youtback.service;
 
+import com.artur.youtback.config.KafkaConfig;
 import com.artur.youtback.converter.UserConverter;
 import com.artur.youtback.converter.VideoConverter;
 import com.artur.youtback.entity.Like;
@@ -7,10 +8,8 @@ import com.artur.youtback.entity.SearchHistory;
 import com.artur.youtback.entity.VideoEntity;
 import com.artur.youtback.entity.user.UserEntity;
 import com.artur.youtback.entity.user.WatchHistory;
-import com.artur.youtback.exception.AlreadyExistException;
 import com.artur.youtback.exception.NotFoundException;
 import com.artur.youtback.exception.ProcessingException;
-import com.artur.youtback.mediator.ProcessingEventMediator;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
@@ -26,11 +25,13 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
+import org.springframework.kafka.requestreply.RequestReplyFuture;
 import org.springframework.lang.Nullable;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -79,9 +80,7 @@ public class UserService {
     @Autowired
     PasswordEncoder passwordEncoder;
     @Autowired
-    KafkaTemplate<String, String> kafkaTemplate;
-    @Autowired
-    ProcessingEventMediator processingEventMediator;
+    ReplyingKafkaTemplate<String, String, Boolean> replyingKafkaTemplate;
 
 
     public List<User> findAll() throws NotFoundException {
@@ -253,10 +252,10 @@ public class UserService {
         Assert.notNull(pictureName, "Picture name can not be null");
 
         objectStorageService.putObject(inputStream, pictureName);
-        //TODO: create new service for kafka, that will take on the task of waiting for processing or use ReplyingKafkaTemplate
-        String kafkaKey = new Base64StringKeyGenerator(Base64.getEncoder()).generateKey();
-        kafkaTemplate.send(AppConstants.USER_PICTURE_INPUT_TOPIC,kafkaKey ,pictureName);
-        if(!processingEventMediator.userPictureProcessingWait(kafkaKey)){
+        RequestReplyFuture<String, String, Boolean> response = replyingKafkaTemplate.sendAndReceive(
+                new ProducerRecord<>(KafkaConfig.USER_PICTURE_INPUT_TOPIC ,pictureName)
+        );
+        if(!response.get(5, TimeUnit.MINUTES).value()){
             throw new ProcessingException("User picture processing failed");
         }
         return pictureName;
@@ -466,7 +465,7 @@ public class UserService {
                 registerUser(uuid, username, AppAuthorities.ROLE_USER.name(), pictureInputStream, AppConstants.USER_PATH + profilePic.getName());
             } catch (Exception e) {
                 createdUsers.decrementAndGet();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
             }
         };
         for(int i = 0; i< amount; i++){

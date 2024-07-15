@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.concurrent.*;
 
-@Component
+//@Component
 public class ProcessingEventMediator {
     private static final Logger logger = LoggerFactory.getLogger(ProcessingEventMediator.class);
 

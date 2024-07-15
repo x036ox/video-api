@@ -1,6 +1,5 @@
 package com.artur.youtback.config;
 
-import com.artur.youtback.utils.AppConstants;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -10,17 +9,30 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
-import org.springframework.kafka.core.*;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
 public class KafkaConfig {
+    public static final String VIDEO_INPUT_TOPIC = "video_processor.video.input";
+    public static final String VIDEO_OUTPUT_TOPIC = "video_processor.video.output";
+    public static final String THUMBNAIL_INPUT_TOPIC = "video-processor.thumbnail.input";
+    public static final String THUMBNAIL_OUTPUT_TOPIC = "video-processor.thumbnail.output";
+    public static final String USER_PICTURE_INPUT_TOPIC = "video-processor.user-picture.input";
+    public static final String USER_PICTURE_OUTPUT_TOPIC = "video-processor.user-picture.output";
+
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     String bootstrapServers;
@@ -37,9 +49,7 @@ public class KafkaConfig {
 
 
     @Bean
-    public KafkaListenerContainerFactory<
-                ConcurrentMessageListenerContainer<String, Boolean>
-                > resultListenerFactory(ConsumerFactory<String, Boolean> consumerFactory){
+    public ConcurrentKafkaListenerContainerFactory<String, Boolean> resultListenerFactory(ConsumerFactory<String, Boolean> consumerFactory){
         ConcurrentKafkaListenerContainerFactory<String, Boolean> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         return factory;
@@ -55,41 +65,45 @@ public class KafkaConfig {
         return new DefaultKafkaProducerFactory<>(props);
     }
 
-
-
     @Bean
-    public KafkaTemplate<String, String> kafkaTemplate(ProducerFactory<String, String> producerFactory){
-        return new KafkaTemplate<>(producerFactory);
+    public ReplyingKafkaTemplate<String, String, Boolean> replyingKafkaTemplate(ProducerFactory<String, String> producerFactory,
+                                                                                ConcurrentKafkaListenerContainerFactory<String, Boolean> listenerContainerFactory){
+        ConcurrentMessageListenerContainer<String, Boolean> container = listenerContainerFactory.createContainer(THUMBNAIL_OUTPUT_TOPIC, VIDEO_OUTPUT_TOPIC, USER_PICTURE_OUTPUT_TOPIC);
+        container.getContainerProperties().setGroupId("yout-back:consumer");
+        var template = new ReplyingKafkaTemplate<>(producerFactory, container);
+        listenerContainerFactory.setReplyTemplate(template);
+        template.setDefaultReplyTimeout(Duration.of(5, ChronoUnit.MINUTES));
+        return template;
     }
 
 
     @Bean
     public NewTopic userPictureTopicInput(){
-        return TopicBuilder.name(AppConstants.USER_PICTURE_INPUT_TOPIC).partitions(5).build();
+        return TopicBuilder.name(USER_PICTURE_INPUT_TOPIC).partitions(5).build();
     }
 
     @Bean
     public NewTopic videoTopicInput(){
-        return TopicBuilder.name(AppConstants.VIDEO_INPUT_TOPIC).partitions(5).build();
+        return TopicBuilder.name(VIDEO_INPUT_TOPIC).partitions(5).build();
     }
 
     @Bean
     public NewTopic thumbnailTopicInput(){
-        return TopicBuilder.name(AppConstants.THUMBNAIL_INPUT_TOPIC).partitions(5).build();
+        return TopicBuilder.name(THUMBNAIL_INPUT_TOPIC).partitions(5).build();
     }
 
     @Bean
     public NewTopic userPictureTopicOutput(){
-        return TopicBuilder.name(AppConstants.USER_PICTURE_OUTPUT_TOPIC).partitions(5).build();
+        return TopicBuilder.name(USER_PICTURE_OUTPUT_TOPIC).partitions(5).build();
     }
 
     @Bean
     public NewTopic videoTopicOutput(){
-        return TopicBuilder.name(AppConstants.VIDEO_OUTPUT_TOPIC).partitions(5).build();
+        return TopicBuilder.name(VIDEO_OUTPUT_TOPIC).partitions(5).build();
     }
 
     @Bean
     public NewTopic thumbnailTopicOutput(){
-        return TopicBuilder.name(AppConstants.THUMBNAIL_OUTPUT_TOPIC).partitions(5).build();
+        return TopicBuilder.name(THUMBNAIL_OUTPUT_TOPIC).partitions(5).build();
     }
 }

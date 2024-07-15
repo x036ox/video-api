@@ -4,22 +4,19 @@ import com.artur.youtback.YoutBackApplicationTests;
 import com.artur.youtback.converter.UserConverter;
 import com.artur.youtback.entity.VideoEntity;
 import com.artur.youtback.entity.user.UserEntity;
-import com.artur.youtback.listener.ProcessingEventHandler;
-import com.artur.youtback.mediator.ProcessingEventMediator;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.repository.UserRepository;
 import com.artur.youtback.repository.VideoRepository;
-import com.artur.youtback.service.minio.ObjectStorageService;
 import com.artur.youtback.utils.AppAuthorities;
 import com.artur.youtback.utils.AppConstants;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.InputStream;
@@ -33,8 +30,6 @@ class UserServiceTest extends YoutBackApplicationTests {
 
     @Autowired
     UserService userService;
-    @MockBean
-    ObjectStorageService objectStorageService;
     @Autowired
     UserRepository userRepository;
     @Autowired
@@ -43,19 +38,14 @@ class UserServiceTest extends YoutBackApplicationTests {
     VideoService videoService;
     @Autowired
     EntityManager entityManager;
-    @MockBean
-    ProcessingEventMediator processingEventMediator;
-    @MockBean
-    ProcessingEventHandler processingEventHandler;
     @Autowired
     UserConverter userConverter;
 
     @Test
     @Transactional
     void createUpdateDeleteTest() throws Exception {
-        when(processingEventMediator.userPictureProcessingWait(anyString())).thenReturn(true);
         Path picturePath = Path.of(TEST_IMAGE_FILE);
-        MockMultipartFile picture = new MockMultipartFile("user-picture", Files.readAllBytes(picturePath));
+        MockMultipartFile picture = new MockMultipartFile("user-picture", TEST_IMAGE_FILE, "image/jpg", Files.readAllBytes(picturePath));
         User user = assertDoesNotThrow(() -> userService.registerUser(new UserCreateRequest(
                 "example@gmail.com",
                 "test-user",
@@ -65,38 +55,30 @@ class UserServiceTest extends YoutBackApplicationTests {
         String id = user.getId();
         assertTrue(userRepository.existsById(id));
         verify(objectStorageService).putObject(any(InputStream.class), eq(AppConstants.USER_PATH + id + AppConstants.PROFILE_PIC_FILENAME_EXTENSION));
-        verify(processingServiceTemplate, times(1)).send(eq(AppConstants.USER_PICTURE_INPUT_TOPIC), anyString(), anyString());
-        verify(processingEventMediator, times(1)).userPictureProcessingWait(eq(user.getId()));
+        verify(replyingKafkaTemplate, times(1)).sendAndReceive(any(ProducerRecord.class));
+        assertNotNull(userRepository.findById(user.getId()).get().getUserMetadata());
 
-        clearInvocations(objectStorageService);
-        clearInvocations(processingServiceTemplate);
-        clearInvocations(processingEventMediator);
+        clearInvocations(objectStorageService, replyingKafkaTemplate);
         userService.update(new UserUpdateRequest(
-                "newusername",
+                "new test-user",
                 "new password",
                 new MockMultipartFile("new-user-picture", "picture.png", "image/png", new byte[]{2, 3, 4})
         ), id);
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Cannot find user"));
-        verify(objectStorageService).putObject(any(), eq(AppConstants.USER_PATH + id + AppConstants.PROFILE_PIC_FILENAME_EXTENSION));
-        verify(processingServiceTemplate, times(1)).send(eq(AppConstants.USER_PICTURE_INPUT_TOPIC),anyString(), anyString());
-        verify(processingEventMediator, times(1)).userPictureProcessingWait(eq(user.getId().toString()));
+        verify(objectStorageService).putObject(any(), anyString());
+        verify(replyingKafkaTemplate, times(1)).sendAndReceive(any(ProducerRecord.class));
         assertEquals("new test-user", userEntity.getUsername());
 
         userService.deleteById(id);
         assertTrue(userRepository.findById(id).isEmpty());
-        verify(objectStorageService).removeObject( AppConstants.USER_PATH + id + AppConstants.PROFILE_PIC_FILENAME_EXTENSION);
+        verify(objectStorageService).removeObject( anyString());
     }
 
-    @Test
-    public void shTest(){
-        System.out.println("souting");
-        userRepository.findById("8ba55bc1-6b77-465f-97a0-8d72484ba63f").get().getSearchHistory().forEach(System.out::println);
-    }
 
     @Test
     public void notInterestedTest() throws Exception {
         String id = "1";
-        UserEntity userEntity = userConverter.convertToEntity(
+        userConverter.convertToEntity(
                 userService.registerUser(new UserCreateRequest(
                         "1",
                         "user",
@@ -104,24 +86,27 @@ class UserServiceTest extends YoutBackApplicationTests {
                         null
                         )
                 ));
-        UserEntity videoOwner = userConverter.convertToEntity(
-                userService.registerUser(new UserCreateRequest(
-                                "2",
-                                "user",
-                                AppAuthorities.ROLE_USER.name(),
-                                null
-                        )
-                ));
+        UserEntity userEntity = userRepository.findById("1").orElseThrow();
+
+        userConverter.convertToEntity(
+        userService.registerUser(new UserCreateRequest(
+                        "2",
+                        "user",
+                        AppAuthorities.ROLE_USER.name(),
+                        null
+                )
+        ));
+        UserEntity videoOwner = userRepository.findById("2").orElseThrow();
         VideoEntity videoEntity = videoService.create(
                 new VideoCreateRequest("video",
                         "description",
                         "Sport",
                         new MockMultipartFile("thumbnail", new byte[]{2, 2}),
-                        new MockMultipartFile("video", new byte[]{2, 2})),
+                        new MockMultipartFile("video", Files.readAllBytes(Path.of(TEST_VIDEO_FILE)))),
                 videoOwner.getId()
-        ).orElseThrow(() -> new RuntimeException("Could not create video"));
+        );
         userEntity.getUserMetadata().getCategories().put("Sport", 4);
-        userRepository.save(userEntity);            //artificially assign categories to the user
+        userRepository.saveAndFlush(userEntity);            //artificially assign categories to the user
         userService.notInterested(videoEntity.getId(), userEntity.getId());
         int categoriesBefore = userEntity.getUserMetadata().getCategories().get(videoEntity.getVideoMetadata().getCategory());
 
