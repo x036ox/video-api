@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/")
+@EnableCaching
 public class VideoController {
 
     private static final Logger logger = LoggerFactory.getLogger(VideoController.class);
@@ -79,14 +81,6 @@ public class VideoController {
 //        videoService.testMethod();
 //        return ResponseEntity.ok(null);
 //    }
-
-    private ResponseEntity<List<Video>> findAll(SortOption sortOption){
-        try{
-            return ResponseEntity.ok(videoService.findAll(sortOption));
-        }catch(NotFoundException e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
-    }
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ROLE_ADMIN')")

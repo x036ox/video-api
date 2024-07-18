@@ -32,6 +32,9 @@ import org.apache.tika.language.detect.LanguageDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 import org.springframework.kafka.requestreply.RequestReplyFuture;
 import org.springframework.stereotype.Service;
@@ -83,18 +86,7 @@ public class VideoService {
     ReplyingKafkaTemplate<String, String, Boolean> replyingKafkaTemplate;
 
 
-    public List<Video> findAll(SortOption sortOption) throws NotFoundException {
-
-        if(sortOption != null){
-            return videoRepository.findAll().stream().limit(AppConstants.MAX_VIDEOS_PER_REQUEST)
-                    .sorted(SortOptionsComparators.get(sortOption))
-                    .map(videoConverter::convertToModel).toList();
-        }
-
-        return videoRepository.findAll().stream().limit(AppConstants.MAX_VIDEOS_PER_REQUEST)
-                .map(videoConverter::convertToModel).toList();
-    }
-
+    @Cacheable(value = "video", key = "#id")
     public Video findById(Long id) throws NotFoundException{
         Optional<VideoEntity> optionalVideoEntity = videoRepository.findById(id);
         if(optionalVideoEntity.isEmpty()) throw new NotFoundException("Video not Found");
@@ -102,6 +94,7 @@ public class VideoService {
         return videoConverter.convertToModel(optionalVideoEntity.get());
     }
 
+    @Cacheable(value = "videos")
     public List<Video> findByOption(List<String> options, List<String> values) throws NullPointerException, IllegalArgumentException{
         return Objects.requireNonNull(Tools.findByOption(options, values, entityManager).stream().map(videoConverter::convertToModel).toList());
     }
@@ -136,6 +129,7 @@ public class VideoService {
      * @return video, converted to DTO
      * @throws NotFoundException if video id not found
      */
+    @Cacheable(value = "video", key = "#videoId")
     @Transactional
     public Video watchById(Long videoId, String userId) throws NotFoundException{
         VideoEntity videoEntity = videoRepository.findById(videoId).orElseThrow(() -> new NotFoundException("Video not found"));
@@ -298,6 +292,7 @@ public class VideoService {
      * @param id video id
      * @throws Exception if deleting from minio service failed.
      */
+    @CacheEvict(value = "video", key = "#id")
     @Transactional
     public void deleteById(Long id) throws Exception {
         if(!videoRepository.existsById(id)) throw new NotFoundException("Video not found");
@@ -321,7 +316,8 @@ public class VideoService {
      * @param updateRequest instance of {@link VideoUpdateRequest}
      * @throws Exception - if video not found or error occurred while uploading to {@link ObjectStorageService}
      */
-    public void update(VideoUpdateRequest updateRequest) throws Exception {
+    @CachePut(value = "video", key = "#updateRequest.videoId")
+    public Video update(VideoUpdateRequest updateRequest) throws Exception {
         Optional<VideoEntity> optionalVideoEntity = videoRepository.findById(updateRequest.videoId());
         if(optionalVideoEntity.isEmpty()) throw new NotFoundException("Video not Found");
 
@@ -368,7 +364,7 @@ public class VideoService {
         if(updateRequest.category() != null){
             videoEntity.getVideoMetadata().setCategory(updateRequest.category());
         }
-        videoRepository.save(videoEntity);
+        return videoConverter.convertToModel(videoRepository.save(videoEntity));
     }
 
     /**Creates specified amount of videos. Video data will be picked randomly of

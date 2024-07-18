@@ -11,6 +11,8 @@ services:
 #      - kafka
 #      - minio
 #      - media-processor
+#      - auth-server
+#      - redis
 #    environment:
 #      - SPRING_PROFILES_ACTIVE=prod
 
@@ -34,6 +36,15 @@ services:
       - minio
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+
+  redis:
+    image: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - "./src/main/resources/redis.conf:/usr/local/etc/redis/redis.conf"
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
 
   db:
     image: mysql:latest
