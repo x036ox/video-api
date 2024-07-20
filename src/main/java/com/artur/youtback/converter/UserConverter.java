@@ -3,7 +3,7 @@ package com.artur.youtback.converter;
 import com.artur.youtback.entity.SearchHistory;
 import com.artur.youtback.entity.user.UserEntity;
 import com.artur.youtback.model.user.User;
-import com.artur.youtback.service.minio.ObjectStorageService;
+import com.artur.objectstorage.service.ObjectStorageService;
 import com.artur.youtback.utils.AppAuthorities;
 import com.artur.youtback.utils.ImageUtils;
 import com.artur.youtback.utils.comparators.SearchHistoryComparator;

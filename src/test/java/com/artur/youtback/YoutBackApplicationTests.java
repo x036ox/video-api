@@ -1,7 +1,7 @@
 package com.artur.youtback;
 
 import com.artur.youtback.config.KafkaConfig;
-import com.artur.youtback.service.minio.ObjectStorageService;
+import com.artur.objectstorage.service.ObjectStorageService;
 import jakarta.transaction.Transactional;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;

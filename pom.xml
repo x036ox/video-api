@@ -124,6 +124,11 @@
 			<version>8.4.3</version>
 		</dependency>
 		<dependency>
+			<groupId>com.artur</groupId>
+			<artifactId>object-storage</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>

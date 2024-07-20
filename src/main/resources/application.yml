@@ -47,12 +47,11 @@ application:
     user-picture: "/user/picture"
 
 
-minio:
-  bucket:
-    store: yout-back
-  url: http://${MINIO_HOST:localhost}:9000
-  access-key: ${MINIO_ACCESS:admin}
-  secret-key: ${MINIO_SECRET:adminadmin}
+object-storage:
+  root-folder: yout-back
+  url: http://${OBJECT_STORAGE_HOST:localhost}:9000
+  access-key: ${OBJECT_STORAGE_ACCESS:admin}
+  secret-key: ${OBJECT_STORAGE_SECRET:adminadmin}
 
 logging:
   logback:

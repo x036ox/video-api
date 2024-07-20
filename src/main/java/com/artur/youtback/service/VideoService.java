@@ -14,7 +14,7 @@ import com.artur.youtback.model.video.Video;
 import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;
 import com.artur.youtback.repository.*;
-import com.artur.youtback.service.minio.ObjectStorageService;
+import com.artur.objectstorage.service.ObjectStorageService;
 import com.artur.youtback.utils.AppConstants;
 import com.artur.youtback.utils.FindOptions;
 import com.artur.youtback.utils.MediaUtils;

@@ -41,6 +41,17 @@ public class VideoController {
     @Autowired
     JwtDecoder jwtDecoder;
 
+
+    @GetMapping("/test")
+    public ResponseEntity<?> test() throws InterruptedException {
+        System.out.println("test method...");
+        try {
+            return ResponseEntity.ok(videoService.findById(4L));
+        } catch (NotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("")
     public ResponseEntity<?> find(@RequestParam(required = false) Long videoId,
                                   @RequestParam(required = false, name = "sortOption") Integer sortOption,

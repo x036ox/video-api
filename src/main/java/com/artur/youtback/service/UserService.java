@@ -15,7 +15,7 @@ import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.model.video.Video;
 import com.artur.youtback.repository.*;
-import com.artur.youtback.service.minio.ObjectStorageService;
+import com.artur.objectstorage.service.ObjectStorageService;
 import com.artur.youtback.utils.*;
 import com.artur.youtback.utils.comparators.SearchHistoryComparator;
 import com.artur.youtback.utils.comparators.SortOptionsComparators;
