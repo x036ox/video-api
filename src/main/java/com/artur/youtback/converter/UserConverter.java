@@ -1,7 +1,7 @@
 package com.artur.youtback.converter;
 
-import com.artur.youtback.entity.SearchHistory;
-import com.artur.youtback.entity.user.UserEntity;
+import com.artur.common.entity.SearchHistory;
+import com.artur.common.entity.user.UserEntity;
 import com.artur.youtback.model.user.User;
 import com.artur.objectstorage.service.ObjectStorageService;
 import com.artur.youtback.utils.AppAuthorities;

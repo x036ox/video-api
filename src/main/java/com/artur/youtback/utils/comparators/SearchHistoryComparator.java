@@ -1,6 +1,6 @@
 package com.artur.youtback.utils.comparators;
 
-import com.artur.youtback.entity.SearchHistory;
+import com.artur.common.entity.SearchHistory;
 
 import java.util.Comparator;
 

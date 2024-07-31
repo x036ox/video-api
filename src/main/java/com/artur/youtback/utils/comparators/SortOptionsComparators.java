@@ -1,6 +1,6 @@
 package com.artur.youtback.utils.comparators;
 
-import com.artur.youtback.entity.VideoEntity;
+import com.artur.common.entity.VideoEntity;
 import com.artur.youtback.utils.SortOption;
 import org.springframework.lang.Nullable;
 

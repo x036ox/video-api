@@ -2,14 +2,14 @@ package com.artur.youtback.service;
 
 import com.artur.youtback.YoutBackApplicationTests;
 import com.artur.youtback.converter.UserConverter;
-import com.artur.youtback.entity.VideoEntity;
-import com.artur.youtback.entity.user.UserEntity;
+import com.artur.common.entity.VideoEntity;
+import com.artur.common.entity.user.UserEntity;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.model.video.VideoCreateRequest;
-import com.artur.youtback.repository.UserRepository;
-import com.artur.youtback.repository.VideoRepository;
+import com.artur.common.repository.UserRepository;
+import com.artur.common.repository.VideoRepository;
 import com.artur.youtback.utils.AppAuthorities;
 import com.artur.youtback.utils.AppConstants;
 import jakarta.persistence.EntityManager;

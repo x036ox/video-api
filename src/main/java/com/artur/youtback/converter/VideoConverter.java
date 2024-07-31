@@ -1,12 +1,12 @@
 package com.artur.youtback.converter;
 
-import com.artur.youtback.entity.VideoEntity;
-import com.artur.youtback.entity.user.UserEntity;
+import com.artur.common.entity.VideoEntity;
+import com.artur.common.entity.user.UserEntity;
 import com.artur.youtback.model.video.Video;
 import com.artur.objectstorage.service.ObjectStorageService;
 import com.artur.youtback.utils.AppConstants;
 import com.artur.youtback.utils.ImageUtils;
-import com.artur.youtback.utils.TimeOperations;
+import com.artur.common.utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +45,7 @@ public class VideoConverter {
         return Video.newBuilder()
                 .id(videoEntity.getId())
                 .title(videoEntity.getTitle())
-                .duration(TimeOperations.seccondsToString(duration,  duration >= 3600 ? "HH:mm:ss" : "mm:ss"))
+                .duration(TimeUtils.seccondsToString(duration,  duration >= 3600 ? "HH:mm:ss" : "mm:ss"))
                 .thumbnail(encodedImage)
                 .views(handleViews(videoEntity.getViews()))
                 .likes(videoEntity.getLikes().size())

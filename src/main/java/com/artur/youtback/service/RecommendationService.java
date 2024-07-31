@@ -1,10 +1,10 @@
 package com.artur.youtback.service;
 
-import com.artur.youtback.entity.VideoEntity;
+import com.artur.common.entity.VideoEntity;
 import com.artur.youtback.exception.NotFoundException;
-import com.artur.youtback.repository.LikeRepository;
-import com.artur.youtback.repository.UserRepository;
-import com.artur.youtback.repository.VideoRepository;
+import com.artur.common.repository.LikeRepository;
+import com.artur.common.repository.UserRepository;
+import com.artur.common.repository.VideoRepository;
 import com.artur.youtback.utils.AppConstants;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
