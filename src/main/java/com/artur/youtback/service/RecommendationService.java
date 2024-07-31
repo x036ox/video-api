@@ -1,7 +1,7 @@
 package com.artur.youtback.service;
 
 import com.artur.common.entity.VideoEntity;
-import com.artur.youtback.exception.NotFoundException;
+import com.artur.common.exception.NotFoundException;
 import com.artur.common.repository.LikeRepository;
 import com.artur.common.repository.UserRepository;
 import com.artur.common.repository.VideoRepository;

@@ -1,7 +1,7 @@
 package com.artur.youtback.controller;
 
 import com.artur.youtback.exception.AlreadyExistException;
-import com.artur.youtback.exception.NotFoundException;
+import com.artur.common.exception.NotFoundException;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;

@@ -4,7 +4,7 @@ import com.artur.youtback.YoutBackApplicationTests;
 import com.artur.common.entity.Like;
 import com.artur.common.entity.VideoEntity;
 import com.artur.common.entity.user.UserEntity;
-import com.artur.youtback.exception.NotFoundException;
+import com.artur.common.exception.NotFoundException;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.video.Video;

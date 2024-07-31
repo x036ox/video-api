@@ -1,7 +1,7 @@
 package com.artur.youtback.controller;
 
 
-import com.artur.youtback.exception.NotFoundException;
+import com.artur.common.exception.NotFoundException;
 import com.artur.youtback.model.video.Video;
 import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;

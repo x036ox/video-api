@@ -8,7 +8,7 @@ import com.artur.common.entity.SearchHistory;
 import com.artur.common.entity.VideoEntity;
 import com.artur.common.entity.user.UserEntity;
 import com.artur.common.entity.user.WatchHistory;
-import com.artur.youtback.exception.NotFoundException;
+import com.artur.common.exception.NotFoundException;
 import com.artur.youtback.exception.ProcessingException;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
