@@ -1,7 +1,5 @@
 package com.artur.youtback.service;
 
-import com.artur.youtback.config.KafkaConfig;
-import com.artur.youtback.converter.VideoConverter;
 import com.artur.common.entity.Like;
 import com.artur.common.entity.VideoEntity;
 import com.artur.common.entity.VideoMetadata;
@@ -9,16 +7,19 @@ import com.artur.common.entity.user.UserEntity;
 import com.artur.common.entity.user.UserMetadata;
 import com.artur.common.entity.user.WatchHistory;
 import com.artur.common.exception.NotFoundException;
+import com.artur.common.repository.*;
+import com.artur.objectstorage.service.ObjectStorageService;
+import com.artur.youtback.config.KafkaConfig;
+import com.artur.youtback.converter.VideoConverter;
 import com.artur.youtback.exception.ProcessingException;
+import com.artur.youtback.http.client.RecommendationsHttpClient;
 import com.artur.youtback.model.video.Video;
 import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;
-import com.artur.common.repository.*;
-import com.artur.objectstorage.service.ObjectStorageService;
+import com.artur.youtback.sort.VideoSort;
 import com.artur.youtback.utils.AppConstants;
 import com.artur.youtback.utils.FindOptions;
 import com.artur.youtback.utils.MediaUtils;
-import com.artur.youtback.sort.VideoSort;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -52,6 +53,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Service
 public class VideoService {
@@ -66,7 +68,7 @@ public class VideoService {
     @Autowired
     private LikeRepository likeRepository;
     @Autowired
-    RecommendationService recommendationService;
+    RecommendationsHttpClient recommendationsClient;
     @Autowired
     TransactionTemplate transactionTemplate;
     @Autowired
@@ -101,14 +103,22 @@ public class VideoService {
     public List<Video> recommendations(
             String userId,
             Integer page,
-            @NotNull String[] languages,
+            @NotNull String languages,
             Integer size,
             VideoSort videoSort
     ) throws IllegalArgumentException{
-        if(languages.length == 0) throw new IllegalArgumentException("Should be at least one language");
+        if(languages.isEmpty()) throw new IllegalArgumentException("Should be at least one language");
         try {
-            var videos = recommendationService.getRecommendationsFor(userId,page, languages, size);
-            if(sortOption != null){
+            List<Long> ids = recommendationsClient.getRecommendations(
+                    userId,
+                    page,
+                    languages,
+                    size
+            );
+            List<VideoEntity> videos = ids.stream()
+                    .map(id -> videoRepository.findById(id).orElseThrow())
+                    .collect(Collectors.toCollection(ArrayList::new));
+            if(videoSort != null){
                 return videos.stream()
                         .sorted(VideoSort.getComparator(videoSort))
                         .map(videoConverter::convertToModel).toList();

@@ -68,17 +68,15 @@ public class VideoController {
             }
         } else{
             try{
-                long start = System.currentTimeMillis();
                 String languages = request.getHeader("User-Languages");
                 if(languages.isEmpty()) throw new IllegalArgumentException("User languages should not be empty");
                 List<Video> videos = videoService.recommendations(
                         AuthenticationUtils.getUserId(authentication),
                         page,
-                        languages.split(","),
+                        languages,
                         size == null ? AppConstants.MAX_VIDEOS_PER_REQUEST : size,
                         VideoSort.convert(sortOption)
                 );
-                logger.trace("Recommendations done in " + ((float) (System.currentTimeMillis() - start) / 1000) + "s");
                 return ResponseEntity.ok(videos);
             } catch (IllegalArgumentException e){
                 return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(e.getMessage());

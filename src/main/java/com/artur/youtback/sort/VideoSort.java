@@ -2,6 +2,7 @@ package com.artur.youtback.sort;
 
 import com.artur.common.entity.VideoEntity;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.lang.Nullable;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -15,7 +16,10 @@ public enum VideoSort {
     BY_DURATION_FROM_DESC,
     BY_DURATION_FROM_ACS;
 
-    public static VideoSort convert(int sortInteger){
+    public static VideoSort convert(@Nullable Integer sortInteger){
+        if(sortInteger == null){
+            return null;
+        }
         switch (sortInteger) {
             case 1 -> {
                 return VideoSort.BY_VIEWS_FROM_DESC;

@@ -5,6 +5,7 @@ import org.apache.tika.language.detect.LanguageDetector;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class AppConfig {
@@ -14,5 +15,10 @@ public class AppConfig {
     @Scope("prototype")
     public LanguageDetector languageDetector(){
         return new OptimaizeLangDetector().loadModels();
+    }
+
+    @Bean
+    public RestTemplate restTemplate(){
+        return new RestTemplate();
     }
 }
