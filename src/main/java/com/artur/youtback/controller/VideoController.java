@@ -7,6 +7,7 @@ import com.artur.youtback.model.video.VideoCreateRequest;
 import com.artur.youtback.model.video.VideoUpdateRequest;
 import com.artur.youtback.service.UserService;
 import com.artur.youtback.service.VideoService;
+import com.artur.youtback.sort.VideoSort;
 import com.artur.youtback.utils.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -75,8 +76,8 @@ public class VideoController {
                         page,
                         languages.split(","),
                         size == null ? AppConstants.MAX_VIDEOS_PER_REQUEST : size,
-                        Utils.processSortOptions(sortOption)
-                        );
+                        VideoSort.convert(sortOption)
+                );
                 logger.trace("Recommendations done in " + ((float) (System.currentTimeMillis() - start) / 1000) + "s");
                 return ResponseEntity.ok(videos);
             } catch (IllegalArgumentException e){

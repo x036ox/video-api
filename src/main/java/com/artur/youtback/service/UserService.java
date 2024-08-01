@@ -16,9 +16,9 @@ import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.model.video.Video;
 import com.artur.common.repository.*;
 import com.artur.objectstorage.service.ObjectStorageService;
+import com.artur.youtback.sort.VideoSort;
 import com.artur.youtback.utils.*;
 import com.artur.youtback.utils.comparators.SearchHistoryComparator;
-import com.artur.youtback.utils.comparators.SortOptionsComparators;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -33,7 +33,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 import org.springframework.kafka.requestreply.RequestReplyFuture;
 import org.springframework.lang.Nullable;
-import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -102,14 +101,14 @@ public class UserService {
      * Find all user videos. Can be sorted by specified sort option, that can be null.
      * If null, result would be sorted by upload date.
      * @param userId user id
-     * @param sortOption sort option, can be null.
+     * @param videoSort sort option, can be null.
      * @return List of founded videos.
      * @throws NotFoundException if user with specified id was not found.
      */
-    public List<Video> getAllUserVideos(String userId, @Nullable SortOption sortOption) throws NotFoundException {
+    public List<Video> getAllUserVideos(String userId, @Nullable VideoSort videoSort) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
-        if(sortOption != null){
-            return userEntity.getUserVideos().stream().sorted(SortOptionsComparators.get(sortOption)).map(videoConverter::convertToModel).toList();
+        if(videoSort != null){
+            return userEntity.getUserVideos().stream().sorted(VideoSort.getComparator(videoSort)).map(videoConverter::convertToModel).toList();
         }
 
         return userEntity.getUserVideos().stream().map(videoConverter::convertToModel).toList();

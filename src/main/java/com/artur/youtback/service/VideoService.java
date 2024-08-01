@@ -18,8 +18,7 @@ import com.artur.objectstorage.service.ObjectStorageService;
 import com.artur.youtback.utils.AppConstants;
 import com.artur.youtback.utils.FindOptions;
 import com.artur.youtback.utils.MediaUtils;
-import com.artur.youtback.utils.SortOption;
-import com.artur.youtback.utils.comparators.SortOptionsComparators;
+import com.artur.youtback.sort.VideoSort;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -104,14 +103,14 @@ public class VideoService {
             Integer page,
             @NotNull String[] languages,
             Integer size,
-            SortOption sortOption
+            VideoSort videoSort
     ) throws IllegalArgumentException{
         if(languages.length == 0) throw new IllegalArgumentException("Should be at least one language");
         try {
             var videos = recommendationService.getRecommendationsFor(userId,page, languages, size);
             if(sortOption != null){
                 return videos.stream()
-                        .sorted(SortOptionsComparators.get(sortOption))
+                        .sorted(VideoSort.getComparator(videoSort))
                         .map(videoConverter::convertToModel).toList();
             } else {
                 return videos.stream().map(videoConverter::convertToModel).toList();

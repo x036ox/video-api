@@ -7,8 +7,8 @@ import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
 import com.artur.youtback.service.EmailService;
 import com.artur.youtback.service.UserService;
+import com.artur.youtback.sort.VideoSort;
 import com.artur.youtback.utils.AuthenticationUtils;
-import com.artur.youtback.utils.Utils;
 import jakarta.annotation.security.RolesAllowed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +67,7 @@ public class UserController {
     @GetMapping("/videos")
     public ResponseEntity<?> getUserVideos(@RequestParam(name = "userId") String userId, @RequestParam(required = false, name = "sortOption") Integer sortOption){
         try {
-            return ResponseEntity.ok(userService.getAllUserVideos(userId,sortOption != null ?  Utils.processSortOptions(sortOption) : null));
+            return ResponseEntity.ok(userService.getAllUserVideos(userId,sortOption != null ?  VideoSort.convert(sortOption) : null));
         } catch (NotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
