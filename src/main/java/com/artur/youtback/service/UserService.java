@@ -205,7 +205,7 @@ public class UserService {
                 pictureName = formPictureName(user.id(), defaultUserPicture);
                 inputStream = new FileInputStream(defaultUserPicture);
             }
-            return registerUser(user.id(), user.username(), user.authorities(), inputStream, pictureName);
+            return registerUser(user.id(), user.username(), user.email(), user.authorities(), inputStream, pictureName);
         } finally {
             if(inputStream != null){
                 inputStream.close();
@@ -224,6 +224,7 @@ public class UserService {
     @Transactional
     private User registerUser(String id,
                               String username,
+                              String email,
                               String authorities,
                               InputStream picture,
                               String pictureName) throws Exception {
@@ -234,6 +235,7 @@ public class UserService {
         UserEntity userEntity = new UserEntity(
                 id,
                 username,
+                email,
                 savePicture(picture, pictureName),
                 authorities
         );
@@ -460,8 +462,9 @@ public class UserService {
             String uuid = genUserId();
             String username = names[index];
             File profilePic = profilePics[(int)Math.floor(Math.random() * profilePics.length)];
+            String email = uuid + "@gmail.com";
             try (InputStream pictureInputStream = new FileInputStream(profilePic)){
-                registerUser(uuid, username, AppAuthorities.ROLE_USER.name(), pictureInputStream, AppConstants.USER_PATH + profilePic.getName());
+                registerUser(uuid, username,email, AppAuthorities.ROLE_USER.name(), pictureInputStream, AppConstants.USER_PATH + profilePic.getName());
             } catch (Exception e) {
                 createdUsers.decrementAndGet();
                 logger.error(e.getMessage(), e);

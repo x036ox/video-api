@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 public record UserCreateRequest(
         @NotEmpty String id,
         @NotEmpty String username,
+        @NotEmpty String email,
         @NotEmpty String authorities,
         @Nullable MultipartFile picture) {
 }

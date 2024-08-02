@@ -49,6 +49,7 @@ class UserServiceTest extends YoutBackApplicationTests {
         User user = assertDoesNotThrow(() -> userService.registerUser(new UserCreateRequest(
                 "example@gmail.com",
                 "test-user",
+                "example@gmail.com",
                 "password",
                 picture
         )));
@@ -82,6 +83,7 @@ class UserServiceTest extends YoutBackApplicationTests {
                 userService.registerUser(new UserCreateRequest(
                         "1",
                         "user",
+                        "example@gmail.com",
                         AppAuthorities.ROLE_USER.name(),
                         null
                         )
@@ -92,6 +94,7 @@ class UserServiceTest extends YoutBackApplicationTests {
         userService.registerUser(new UserCreateRequest(
                         "2",
                         "user",
+                "example@gmail.com",
                         AppAuthorities.ROLE_USER.name(),
                         null
                 )

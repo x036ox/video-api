@@ -56,6 +56,7 @@ class VideoServiceTest extends YoutBackApplicationTests {
         User user = userService.registerUser(new UserCreateRequest(
                 UUID.randomUUID().toString(),
                 "admin",
+                "example@gmail.com",
                 AppAuthorities.ROLE_USER.name(),
                 null
         ));
@@ -169,6 +170,7 @@ class VideoServiceTest extends YoutBackApplicationTests {
         userService.registerUser(new UserCreateRequest(
                 id,
                 "admin",
+                "example@gmail.com",
                 AppAuthorities.ROLE_USER.name(),
                 null
         ));

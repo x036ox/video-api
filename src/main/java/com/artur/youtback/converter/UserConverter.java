@@ -54,6 +54,7 @@ public class UserConverter {
         return new UserEntity(
                 user.getId(),
                 user.getUsername(),
+                user.getEmail(),
                 user.getPicture(),
                 AppAuthorities.ROLE_USER.toString()
         );

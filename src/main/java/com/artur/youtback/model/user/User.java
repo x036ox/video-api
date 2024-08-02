@@ -27,6 +27,7 @@ public class User implements Serializable {
 
     private String id;
     private String username;
+    private String email;
     private String picture;
     private String subscribers;
 
@@ -45,6 +46,7 @@ public class User implements Serializable {
     @JsonCreator
     public User(@JsonProperty("id")String id,
                 @JsonProperty("username")String username,
+                @JsonProperty("email")String email,
                 @JsonProperty("picture")String picture,
                 @JsonProperty("subscribers")String subscribers,
                 @JsonProperty("userVideos")List<Video> userVideos,
