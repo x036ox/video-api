@@ -32,6 +32,7 @@ public class KafkaConfig {
     public static final String THUMBNAIL_OUTPUT_TOPIC = "video-processor.thumbnail.output";
     public static final String USER_PICTURE_INPUT_TOPIC = "video-processor.user-picture.input";
     public static final String USER_PICTURE_OUTPUT_TOPIC = "video-processor.user-picture.output";
+    public static final String VIDEO_CREATED_NOTIFICATION_TOPIC = "video-created.notification";
 
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
@@ -105,5 +106,10 @@ public class KafkaConfig {
     @Bean
     public NewTopic thumbnailTopicOutput(){
         return TopicBuilder.name(THUMBNAIL_OUTPUT_TOPIC).partitions(5).build();
+    }
+
+    @Bean
+    public NewTopic videoCreatedTopic(){
+        return TopicBuilder.name(VIDEO_CREATED_NOTIFICATION_TOPIC).build();
     }
 }

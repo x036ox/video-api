@@ -225,12 +225,20 @@ public class VideoService {
         }
     }
 
+    private void videoCreatedPublish(Long videoId){
+        replyingKafkaTemplate.send(
+                KafkaConfig.VIDEO_CREATED_NOTIFICATION_TOPIC,
+                videoId.toString());
+    }
+
     public VideoEntity create(VideoCreateRequest video, String userId)  throws Exception{
         try(
                 InputStream thumbnailInputStream = video.thumbnail().getInputStream();
                 ByteArrayInputStream videoInputStream = new ByteArrayInputStream(video.video().getBytes());
         ) {
-            return create(video.title(), video.description(), video.category(), thumbnailInputStream, videoInputStream, userId);
+            VideoEntity videoEntity = create(video.title(), video.description(), video.category(), thumbnailInputStream, videoInputStream, userId);
+            videoCreatedPublish(videoEntity.getId());
+            return videoEntity;
         }
     }
 
