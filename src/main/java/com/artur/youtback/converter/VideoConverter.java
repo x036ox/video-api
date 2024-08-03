@@ -2,20 +2,17 @@ package com.artur.youtback.converter;
 
 import com.artur.common.entity.VideoEntity;
 import com.artur.common.entity.user.UserEntity;
-import com.artur.youtback.model.video.Video;
+import com.artur.common.utils.TimeUtils;
 import com.artur.objectstorage.service.ObjectStorageService;
+import com.artur.youtback.model.video.Video;
 import com.artur.youtback.utils.AppConstants;
 import com.artur.youtback.utils.ImageUtils;
-import com.artur.common.utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Period;
+import java.time.*;
 
 @Component
 public class VideoConverter {
@@ -63,7 +60,7 @@ public class VideoConverter {
                 null,
                 title,
                 0,
-                LocalDateTime.now(),
+                Instant.now(),
                 description,
                 channel
         );
@@ -74,9 +71,9 @@ public class VideoConverter {
         else return Integer.toString(views).concat(" views");
     }
 
-    private String handleDate(LocalDateTime uploadDate){
-        Period period = Period.between(uploadDate.toLocalDate(), LocalDate.now());
-        Duration duration = Duration.between(uploadDate, LocalDateTime.now());
+    private String handleDate(Instant uploadDate){
+        Period period = Period.between(uploadDate.atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now(ZoneId.systemDefault()));
+        Duration duration = Duration.between(uploadDate, Instant.now());
         int years = period.getYears();
         if(years >= 1){
             return Integer.toString(years).concat(years == 1 ? " year" : " years").concat(" ago");

@@ -1,16 +1,16 @@
 package com.artur.youtback.service;
 
-import com.artur.youtback.YoutBackApplicationTests;
 import com.artur.common.entity.Like;
 import com.artur.common.entity.VideoEntity;
 import com.artur.common.entity.user.UserEntity;
 import com.artur.common.exception.NotFoundException;
+import com.artur.common.repository.UserRepository;
+import com.artur.common.repository.VideoRepository;
+import com.artur.youtback.YoutBackApplicationTests;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.video.Video;
 import com.artur.youtback.model.video.VideoUpdateRequest;
-import com.artur.common.repository.UserRepository;
-import com.artur.common.repository.VideoRepository;
 import com.artur.youtback.utils.AppAuthorities;
 import com.artur.youtback.utils.AppConstants;
 import jakarta.persistence.EntityManager;
@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
@@ -119,7 +118,7 @@ class VideoServiceTest extends YoutBackApplicationTests {
 
         assertEquals(categoryBefore + 1, userEntity.getUserMetadata().getCategories().get(videoCategory));
         assertEquals(languageBefore + 1, userEntity.getUserMetadata().getLanguages().get(videoLanguage));
-        assertTrue(userEntity.getWatchHistory().stream().anyMatch(el -> Objects.equals(el.getVideoId(), videoEntity.getId()) && el.getDate().isAfter(LocalDateTime.now().minusDays(1))));
+        assertTrue(userEntity.getWatchHistory().stream().anyMatch(el -> Objects.equals(el.getVideoId(), videoEntity.getId()) && el.getDate().isAfter(Instant.now().minus(1,ChronoUnit.DAYS))));
         assertEquals(viewsBefore + 1, videoEntity.getViews());
     }
 

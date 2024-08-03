@@ -47,7 +47,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -157,7 +156,7 @@ public class VideoService {
                 userMetadata.incrementCategory(videoEntity.getVideoMetadata().getCategory());
                 //TODO: change logic of watch history
                 userEntity.getWatchHistory().removeIf(el ->{
-                    if(el.getDate().isAfter(LocalDateTime.now().minusDays(1))&& Objects.equals(el.getVideoId(), videoId)){
+                    if(el.getDate().isAfter(Instant.now().minus(1, ChronoUnit.DAYS))&& Objects.equals(el.getVideoId(), videoId)){
                         watchHistoryRepository.deleteById(el.getId());
                         return true;
                     }
