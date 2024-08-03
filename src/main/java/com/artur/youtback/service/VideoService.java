@@ -37,6 +37,7 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 import org.springframework.kafka.requestreply.RequestReplyFuture;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -101,13 +102,14 @@ public class VideoService {
     }
 
     public List<Video> recommendations(
-            String userId,
-            Integer page,
+            @Nullable String userId,
+            @NotNull Integer page,
             @NotNull String languages,
-            Integer size,
-            VideoSort videoSort
+            @Nullable Integer size,
+            @Nullable VideoSort videoSort
     ) throws IllegalArgumentException{
         if(languages.isEmpty()) throw new IllegalArgumentException("Should be at least one language");
+        if(size == null) size = AppConstants.MAX_VIDEOS_PER_REQUEST;
         try {
             List<Long> ids = recommendationsClient.getRecommendations(
                     userId,
@@ -194,6 +196,7 @@ public class VideoService {
 //            };
             return objectStorageService.getObject(AppConstants.VIDEO_PATH + videoId + "/index.m3u8");
         } catch(Exception e){
+            logger.error(e.getMessage(), e);
             throw new NotFoundException("cannot retrieve target m3u8 file: " + e);
         }
     }
