@@ -95,7 +95,6 @@ public class VideoService {
         return videoConverter.convertToModel(optionalVideoEntity.get());
     }
 
-    @Cacheable(value = "videos")
     public List<Video> findByOption(List<String> options, List<String> values) throws NullPointerException, IllegalArgumentException{
         return Objects.requireNonNull(Tools.findByOption(options, values, entityManager).stream().map(videoConverter::convertToModel).toList());
     }

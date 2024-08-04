@@ -1,20 +1,22 @@
 version: '3'
 
 services:
-#  yout-back:
-#    image: artur110/yout-back
-#    restart: unless-stopped
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      - db
-#      - kafka
-#      - minio
-#      - media-processor
-#      - auth-server
-#      - redis
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=prod
+  yout-back:
+    image: artur110/yout-back
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - kafka
+      - minio
+      - media-processor
+      - auth-server
+      - notifications
+      - recommendations
+      - redis
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
 
   auth-server:
     image: artur110/auth-server
@@ -43,7 +45,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - "./src/main/resources/redis.conf:/usr/local/etc/redis/redis.conf"
+      - "/src/main/resources/redis.conf:/usr/local/etc/redis/redis.conf"
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
 
   db:
@@ -54,6 +56,25 @@ services:
       MYSQL_DATABASE: yout
     ports:
       - "3307:3306"
+
+  notifications:
+    image: artur110/notifications
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - db
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  recommendations:
+    image: artur110/recommendations
+    restart: unless-stopped
+    ports:
+      - "8010:8010"
+    depends_on:
+      - db
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
 
   zookeeper:
     image: zookeeper

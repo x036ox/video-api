@@ -1,8 +1,21 @@
 spring:
+  data:
+    redis:
+      host: redis
   kafka:
     bootstrap-servers: http://kafka:9092
   datasource:
     url: jdbc:mysql://db:3306/yout
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://auth-server:8090/oauth2/jwks
 
-minio:
+object-storage:
   url: http://minio:9000
+
+application:
+  recommendations-service:
+    url: http://recommendations:8010/recs
+

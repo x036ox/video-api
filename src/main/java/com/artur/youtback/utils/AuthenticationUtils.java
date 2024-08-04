@@ -9,7 +9,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 public class AuthenticationUtils {
 
     public static String getUserId(@Nullable Authentication authentication){
-        if(authentication == null){
+        if(authentication == null || authentication.getClass().isAssignableFrom(AnonymousAuthenticationToken.class)){
             return null;
         }
         if(authentication instanceof JwtAuthenticationToken){

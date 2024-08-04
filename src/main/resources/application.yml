@@ -45,6 +45,8 @@ application:
     local:
       default-user-picture: src/main/resources/picture/Default.png
     user-picture: "/user/picture"
+  recommendations-service:
+    url: http://localhost:8010/recs
 
 
 object-storage:
