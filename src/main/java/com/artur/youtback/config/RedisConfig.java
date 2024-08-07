@@ -23,7 +23,7 @@ public class RedisConfig {
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         var config = RedisCacheConfiguration.defaultCacheConfig()
-                .prefixCacheNameWith("yout-back")
+                .prefixCacheNameWith("video-api")
                 .entryTtl(Duration.of(3, ChronoUnit.MINUTES))
                 .serializeValuesWith(
                         RedisSerializationContext.SerializationPair.fromSerializer(

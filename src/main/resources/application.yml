@@ -50,7 +50,7 @@ application:
 
 
 object-storage:
-  root-folder: yout-back
+  root-folder: video-api
   url: http://${OBJECT_STORAGE_HOST:localhost}:9000
   access-key: ${OBJECT_STORAGE_ACCESS:admin}
   secret-key: ${OBJECT_STORAGE_SECRET:adminadmin}

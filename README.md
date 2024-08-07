@@ -30,7 +30,7 @@ run "mvn test" or "./mvnw test"
 
 ## Links
 
-1. This app: https://github.com/x036ox/yout-back
+1. This app: https://github.com/x036ox/video-api
 2. Media processor microservice: https://github.com/x036ox/media-processor
 3. Frontend:  https://github.com/x036ox/yout-front
 

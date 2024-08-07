@@ -70,7 +70,7 @@ public class KafkaConfig {
     public ReplyingKafkaTemplate<String, String, Boolean> replyingKafkaTemplate(ProducerFactory<String, String> producerFactory,
                                                                                 ConcurrentKafkaListenerContainerFactory<String, Boolean> listenerContainerFactory){
         ConcurrentMessageListenerContainer<String, Boolean> container = listenerContainerFactory.createContainer(THUMBNAIL_OUTPUT_TOPIC, VIDEO_OUTPUT_TOPIC, USER_PICTURE_OUTPUT_TOPIC);
-        container.getContainerProperties().setGroupId("yout-back:consumer");
+        container.getContainerProperties().setGroupId("video-api:consumer");
         var template = new ReplyingKafkaTemplate<>(producerFactory, container);
         listenerContainerFactory.setReplyTemplate(template);
         template.setDefaultReplyTimeout(Duration.of(5, ChronoUnit.MINUTES));

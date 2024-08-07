@@ -1,8 +1,8 @@
 version: '3'
 
 services:
-  yout-back:
-    image: artur110/yout-back
+  video-api:
+    image: artur110/video-api
     restart: unless-stopped
     ports:
       - "8080:8080"
