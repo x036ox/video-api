@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.artur</groupId>
-	<artifactId>yout-back</artifactId>
+	<artifactId>video-api</artifactId>
 	<version>1.0</version>
 	<name>yout-back</name>
 	<description>Demo project for Spring Boot</description>
