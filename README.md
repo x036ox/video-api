@@ -2,8 +2,8 @@
 
 ## Description
 
-HLS video streaming application with recommendation system with Minio, Kafka and Ffmpeg.
-Frontend written with React and included in server by default.
+HLS video streaming api with recommendation system with Minio, Kafka and Ffmpeg.
+Project contains UI written in React and is built in docker image.
 
 ## Architecture
 
@@ -11,18 +11,9 @@ Frontend written with React and included in server by default.
 
 ## Get started
 
-### First way
+1. run "docker-compose up"
+2. go to "https://localhost:8080"
 
-1. Install docker
-2. run "docker-compose up"
-3. start an application from your IDE
-4. go to "https://localhost:8080" and login with admin credentials(more below)
-5. go to admin panel and create some users and videos
-
-### Second way
-
-1. Uncomment all microservices in  docker-compose.yml
-2. run "docker-compose up"
 
 ## Testing
 
@@ -30,29 +21,33 @@ run "mvn test" or "./mvnw test"
 
 ## Links
 
-1. This app: https://github.com/x036ox/video-api
-2. Media processor microservice: https://github.com/x036ox/media-processor
-3. Frontend:  https://github.com/x036ox/yout-front
+1. Github: https://github.com/x036ox/video-api
+2. Microservices could be found in: https://github.com/x036ox?tab=repositories
 
 ## About project
 
-This is my implementation of a recommendation system, using YouTube as a model. This service allows users to upload,
-update, delete, store, search, and watch videos. Additionally, users can like videos and subscribe to channels.
-Each user is assigned a different role, with two roles currently defined: default user and admin. The admin role
-grants access to the admin panel, which is discussed further below.
+Spring video api application that handles various video-related tasks, including creation, processing, storage, and access. 
+Application supports caching via redis, allowing faster access to data. 
+Videos processed into m3u8 and ts files in order to support HLS protocol. That allows to get videos by parts.
+Videos are stored in MinIO object storage, which is compatible with Amazon S3. 
+The system is composed of multiple microservices, each responsible for a specific function. 
+Strong emphasis on security. Created an OAuth2 server that handles authorization, and provides JWT for an authentication. 
+The project includes a recommendation system microservice that utilizes complex SQL queries.
+Communication between microservices is managed using Kafka.
 
 When visiting the platform for the first time, there may not be any videos available. Users can either log in with
 the default user credentials, which include admin privileges, and access the admin panel to generate videos and user
 accounts, or they can upload their own videos. However, for testing purposes, it is recommended to use the first
 option (more details in the Admin Panel section below).
 
-#### The application primarily consists of three microservices:
+#### The project primarily consists of these microservices:
 
-1. Youtback Microservice: This handles all HTTP requests and manages entities in the database.
-2. Media Processor Microservice: Responsible for processing pictures and videos.
-3. Client side service: Allows the user to interact with the application. Written with React.
+1. video-api: This is the main application that handles all http requests, interacts with database, etc.
+2. media-processor: Responsible for processing pictures and videos.
+3. recommendations: Provides recommendations via http requests.
+4. notifications: Service that produces notifications.
 
-These services are connected via Kafka. When a client sends an HTTP request, such as a request to create a video,
+These services are connected via Kafka except for recommendations service. When a client sends an HTTP request, such as a request to create a video,
 it is directed to the Youtback service. Youtback receives the request, creates an entity in the database, uploads
 the received video and thumbnail to an object storage service, and sends a message through Kafka to notify the
 Media Processor service of the processing requirements. The Media Processor then downloads the original video and
