@@ -99,7 +99,7 @@ class VideoServiceTest extends YoutBackApplicationTests {
 
     @Test
     public void watchByIdTest() throws Exception {
-        UserEntity userEntity = userRepository.findByAuthority(AppAuthorities.ROLE_ADMIN.name(), Pageable.ofSize(1)).getFirst();
+        UserEntity userEntity = createTestUser();
         VideoEntity videoEntity = createTestVideo(userEntity.getId());
         entityManager.flush();
 

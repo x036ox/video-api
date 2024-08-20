@@ -1,12 +1,12 @@
 spring:
   kafka:
-    bootstrap-servers: http://${KAFKA_HOST:localhost}:${KAFKA_PORT:9093}
+    bootstrap-servers: http://${KAFKA_HOST:localhost}:${KAFKA_PORT:9092}
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
   datasource:
-    url: jdbc:mysql://${MINIO_HOST:localhost}:${MYSQL_PORT:3307}/yout
+    url: jdbc:mysql://${MINIO_HOST:localhost}:${MYSQL_PORT:3306}/yout
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:adminadmin}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -28,6 +28,9 @@ spring:
         smtp:
           auth: true
           starttls: true
+  data:
+    redis:
+      host: localhost
   security:
     oauth2:
       resourceserver:
@@ -35,10 +38,10 @@ spring:
           jwk-set-uri: http://localhost:8090/oauth2/jwks
 
 
-server:
-  ssl:
-    key-store: classpath:certs/domain.p12
-    key-store-password: 5122
+#server:
+#  ssl:
+#    key-store: classpath:certs/domain.p12
+#    key-store-password: 5122
 
 application:
   path:
