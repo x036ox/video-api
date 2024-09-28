@@ -161,6 +161,12 @@ public class UserService {
         }
     }
 
+    public String getDefaultPicture() throws Exception {
+        try(InputStream inputStream = new FileInputStream(defaultUserPicture)){
+            return ImageUtils.encodeImageBase64(inputStream);
+        }
+    }
+
     /**Update {@link UserEntity}. The fields that could be updated:
      * <ul>
      *     <li>Username - can be null

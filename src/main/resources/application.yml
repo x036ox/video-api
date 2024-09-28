@@ -46,7 +46,7 @@ spring:
 application:
   path:
     local:
-      default-user-picture: src/main/resources/picture/Default.png
+      default-user-picture: src/main/resources/picture/default-picture.png
     user-picture: "/user/picture"
   recommendations-service:
     url: http://localhost:8010/recs

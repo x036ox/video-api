@@ -23,7 +23,7 @@ import java.util.List;
 @EqualsAndHashCode
 public class User implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(User.class);
-    public static String DEFAULT_USER_PICTURE = "Prewievs/Default.png";
+    public static String DEFAULT_USER_PICTURE = "Prewievs/default-picture.png";
 
     private String id;
     private String username;

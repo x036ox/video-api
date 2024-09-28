@@ -213,13 +213,13 @@ public class UserController {
         }
     }
 
-    @Operation(description = "Get user`s picture base64 encoded")
+    @Operation(description = "Get user`s picture base64 encoded. Default user picture available at /picture/default")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
                     description = "Encoded base64 user`s picture",
                     content = @Content(
-                            mediaType = MediaType.TEXT_PLAIN_VALUE,
+                            mediaType = MediaType.IMAGE_PNG_VALUE,
                             schema = @Schema(type = "string")
                     )
             ),
@@ -229,9 +229,12 @@ public class UserController {
                     content = @Content()
             )
     })
-    @GetMapping(value = "/picture/{name}", produces = MediaType.TEXT_PLAIN_VALUE)
+    @GetMapping(value = "/picture/{name}", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
     public ResponseEntity<?> getPicture(@PathVariable String name){
         try {
+            if(name.equals("default")){
+                return ResponseEntity.ok(userService.getDefaultPicture());
+            }
             return ResponseEntity.ok(userService.getPicture(name));
         } catch (Exception e) {
             logger.error("Could not retrieve user picture: " + name, e);
