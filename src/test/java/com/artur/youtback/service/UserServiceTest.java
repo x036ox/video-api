@@ -44,19 +44,15 @@ class UserServiceTest extends YoutBackApplicationTests {
     @Test
     @Transactional
     void createUpdateDeleteTest() throws Exception {
-        Path picturePath = Path.of(TEST_IMAGE_FILE);
-        MockMultipartFile picture = new MockMultipartFile("user-picture", TEST_IMAGE_FILE, "image/jpg", Files.readAllBytes(picturePath));
         User user = assertDoesNotThrow(() -> userService.registerUser(new UserCreateRequest(
                 "example@gmail.com",
                 "test-user",
                 "example@gmail.com",
                 "password",
-                picture
+                TEST_IMAGE_FILE
         )));
         String id = user.getId();
         assertTrue(userRepository.existsById(id));
-        verify(objectStorageService).putObject(any(InputStream.class), eq(AppConstants.USER_PATH + id + AppConstants.PROFILE_PIC_FILENAME_EXTENSION));
-        verify(replyingKafkaTemplate, times(1)).sendAndReceive(any(ProducerRecord.class));
         assertNotNull(userRepository.findById(user.getId()).get().getUserMetadata());
 
         clearInvocations(objectStorageService, replyingKafkaTemplate);

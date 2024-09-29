@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -377,14 +378,14 @@ public class UserController {
                     content = @Content()
             )
     })
-    @SecurityRequirement(name = "jwt")
-    @PreAuthorize("isAuthenticated()")
     @PostMapping("/user-info")
     public ResponseEntity<?> postUser(@ModelAttribute UserCreateRequest userCreateRequest){
         try{
+            System.out.println("reqqqqq " +  userCreateRequest);
             userService.registerUser(userCreateRequest);
             return ResponseEntity.ok(null);
         } catch (AlreadyExistException e){
+            logger.warn("Error occurred while creating user", e);
           return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
         } catch(Exception e){
             logger.error("Could not create user", e);
@@ -491,7 +492,7 @@ public class UserController {
     @SecurityRequirement(name = "jwt")
     @PreAuthorize("isAuthenticated()")
     @PutMapping("")
-    public ResponseEntity<String> update(@ModelAttribute UserUpdateRequest user, Authentication authentication){
+    public ResponseEntity<String> update(@RequestBody UserUpdateRequest user, Authentication authentication){
         try{
             userService.update(user, AuthenticationUtils.getUserId(authentication));
             return ResponseEntity.ok(null);

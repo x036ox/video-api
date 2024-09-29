@@ -13,17 +13,19 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(jsr250Enabled = true)
 public class SecurityConfig{
 
+
+    @Value("${spring.security.oauth2.resourceserver.client-id}")
+    private String clientId;
 
     @Bean
     public PasswordEncoder passwordEncoder(){
@@ -35,6 +37,7 @@ public class SecurityConfig{
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         return http
                 .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/user/user-info"))
                 .authorizeHttpRequests(authorize -> {
                     authorize
                             .anyRequest().permitAll();
@@ -46,15 +49,18 @@ public class SecurityConfig{
                 .httpBasic(Customizer.withDefaults())
                 .build();
     }
-    //TODO: move VideoEntity and related to another microservice
 
     private JwtAuthenticationConverter jwtAuthenticationConverter(){
         Converter<Jwt, Collection<GrantedAuthority>> grantedAuthoritiesConverter = jwt ->{
-            JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter1 = new JwtGrantedAuthoritiesConverter();
-            Collection<GrantedAuthority> result = new HashSet<>(grantedAuthoritiesConverter1.convert(jwt));
-            Collection<String> roles = jwt.getClaim("roles");
-            result.addAll(roles.stream().map(SimpleGrantedAuthority::new).toList());
-            return result;
+            Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
+            if (resourceAccess == null || !resourceAccess.containsKey(clientId)) {
+                return Collections.emptyList();
+            }
+            Map<String, Object> clientAccess = (Map<String, Object>) resourceAccess.get(clientId);
+            List<String> roles = (List<String>) clientAccess.get("roles");
+            return roles.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toCollection(LinkedList::new));
         };
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);

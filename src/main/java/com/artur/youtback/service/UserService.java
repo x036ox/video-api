@@ -9,6 +9,7 @@ import com.artur.common.entity.VideoEntity;
 import com.artur.common.entity.user.UserEntity;
 import com.artur.common.entity.user.WatchHistory;
 import com.artur.common.exception.NotFoundException;
+import com.artur.youtback.exception.AlreadyExistException;
 import com.artur.youtback.exception.ProcessingException;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
@@ -200,23 +201,8 @@ public class UserService {
         return AppConstants.USER_PATH + pictureId + "." + StringUtils.getFilenameExtension(originalFilename);
     }
 
-    public User registerUser(UserCreateRequest user) throws Exception {
-        InputStream inputStream = null;
-        try {
-            String pictureName;
-            if(user.picture() != null){
-                pictureName = formPictureName(user.id(), user.picture().getOriginalFilename());
-                inputStream = user.picture().getInputStream();
-            } else {
-                pictureName = formPictureName(user.id(), defaultUserPicture);
-                inputStream = new FileInputStream(defaultUserPicture);
-            }
-            return registerUser(user.id(), user.username(), user.email(), user.authorities(), inputStream, pictureName);
-        } finally {
-            if(inputStream != null){
-                inputStream.close();
-            }
-        }
+    public User registerUser(UserCreateRequest user) throws AlreadyExistException {
+        return registerUser(user.id(), user.username(), user.email(), user.authorities() == null ? AppAuthorities.ROLE_USER.name() : user.authorities(), user.picture());
     }
 
     /**Saves {@link UserEntity} to database, uploads picture to {@link ObjectStorageService} and sends message to processor service.
@@ -232,17 +218,15 @@ public class UserService {
                               String username,
                               String email,
                               String authorities,
-                              InputStream picture,
-                              String pictureName) throws Exception {
+                              String picture) throws AlreadyExistException {
         if(userRepository.existsById(id)){
-            logger.warn("User with this id [" + id + "] already exists");
-            return null;
+            throw new AlreadyExistException("User with this id [" + id + "] already exists");
         }
         UserEntity userEntity = new UserEntity(
                 id,
                 username,
                 email,
-                savePicture(picture, pictureName),
+                picture,
                 authorities
         );
         userRepository.save(userEntity);
@@ -470,7 +454,7 @@ public class UserService {
             File profilePic = profilePics[(int)Math.floor(Math.random() * profilePics.length)];
             String email = uuid + "@gmail.com";
             try (InputStream pictureInputStream = new FileInputStream(profilePic)){
-                registerUser(uuid, username,email, AppAuthorities.ROLE_USER.name(), pictureInputStream, AppConstants.USER_PATH + profilePic.getName());
+                registerUser(uuid, username,email, AppAuthorities.ROLE_USER.name(), savePicture(pictureInputStream, AppConstants.USER_PATH + profilePic.getName()));
             } catch (Exception e) {
                 createdUsers.decrementAndGet();
                 logger.error(e.getMessage(), e);

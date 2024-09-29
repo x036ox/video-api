@@ -31,18 +31,10 @@ public class UserConverter {
         /*sorting search history by date added (from present to past)*/
         List<String> searchOptionList = userEntity.getSearchHistory().stream()
                 .sorted(new SearchHistoryComparator()).map(SearchHistory::getSearchOption).toList();
-        String encodedPicture = null;
-        try {
-            encodedPicture = ImageUtils.encodeImageBase64(objectStorageService.getObject(userEntity.getPicture()));
-        } catch (Exception e) {
-            logger.error("Cant get user picture (path: "
-                    + userEntity.getPicture() +
-                    ") from " + objectStorageService.getClass() + "!! User has empty thumbnail displayed", e);
-        }
         return User.builder()
                 .id(userEntity.getId())
                 .username(userEntity.getUsername())
-                .picture(encodedPicture)
+                .picture(userEntity.getPicture())
                 .subscribers(Integer.toString(subscribers.size()).concat(subscribers.size() == 1 ? " subscriber" : " subscribers"))
                 .userVideos(userEntity.getUserVideos().stream().map(videoConverter::convertToModel).collect(Collectors.toList()))
                 .searchHistory(userEntity.getSearchHistory().stream().map(SearchHistory::getSearchOption).toList())
@@ -50,7 +42,7 @@ public class UserConverter {
                 .build();
     }
 
-    public UserEntity convertToEntity(User user) throws IOException {
+    public UserEntity convertToEntity(User user) {
         return new UserEntity(
                 user.getId(),
                 user.getUsername(),
