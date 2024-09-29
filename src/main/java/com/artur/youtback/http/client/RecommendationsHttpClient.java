@@ -20,7 +20,7 @@ import java.util.List;
 public class RecommendationsHttpClient {
     private static final Logger logger = LoggerFactory.getLogger(RecommendationsHttpClient.class);
 
-    @Value("${application.recommendations-service.url}")
+    @Value("${application.url.recommendations-service}")
     private String url;
 
     @Autowired

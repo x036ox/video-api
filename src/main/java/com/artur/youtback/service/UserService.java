@@ -10,7 +10,7 @@ import com.artur.common.entity.user.UserEntity;
 import com.artur.common.entity.user.WatchHistory;
 import com.artur.common.exception.NotFoundException;
 import com.artur.youtback.exception.AlreadyExistException;
-import com.artur.youtback.exception.ProcessingException;
+import com.artur.youtback.http.client.ImageUploadHttpClient;
 import com.artur.youtback.model.user.User;
 import com.artur.youtback.model.user.UserCreateRequest;
 import com.artur.youtback.model.user.UserUpdateRequest;
@@ -26,22 +26,20 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
-import org.springframework.kafka.requestreply.RequestReplyFuture;
 import org.springframework.lang.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -54,9 +52,7 @@ import java.util.stream.Collectors;
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
-    @Value("${application.path.user-picture}")
-    String userPicturePath;
-    @Value("${application.path.local.default-user-picture}")
+    @Value("${application.url.default-user-picture}")
     String defaultUserPicture;
 
     @Autowired
@@ -81,6 +77,10 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     @Autowired
     ReplyingKafkaTemplate<String, String, Boolean> replyingKafkaTemplate;
+    @Autowired
+    ImageService imageService;
+    @Autowired
+    ImageUploadHttpClient imageUploadHttpClient;
 
 
     public List<User> findAll() throws NotFoundException {
@@ -152,20 +152,8 @@ public class UserService {
     public void deleteById(String id) throws Exception {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not Found"));
         userRepository.delete(userEntity);
-        objectStorageService.removeObject(AppConstants.USER_PATH + userEntity.getId() + AppConstants.PROFILE_PIC_FILENAME_EXTENSION);
+        objectStorageService.removeFolder(AppConstants.USER_PATH + userEntity.getId());
         logger.info("User with id {} successfully deleted" , id);
-    }
-
-    public String getPicture(String name) throws Exception {
-        try(InputStream inputStream = objectStorageService.getObject(name)){
-            return ImageUtils.encodeImageBase64(inputStream);
-        }
-    }
-
-    public String getDefaultPicture() throws Exception {
-        try(InputStream inputStream = new FileInputStream(defaultUserPicture)){
-            return ImageUtils.encodeImageBase64(inputStream);
-        }
     }
 
     /**Update {@link UserEntity}. The fields that could be updated:
@@ -187,10 +175,7 @@ public class UserService {
             userEntity.setUsername(user.username());
         }
         if(user.picture() != null){
-            try (InputStream inputStream = user.picture().getInputStream()){
-                String filename = formPictureName(userId, user.picture().getOriginalFilename());
-                savePicture(inputStream, filename);
-            }
+           userEntity.setPicture(user.picture());
         }
         userRepository.save(userEntity);
     }
@@ -202,7 +187,11 @@ public class UserService {
     }
 
     public User registerUser(UserCreateRequest user) throws AlreadyExistException {
-        return registerUser(user.id(), user.username(), user.email(), user.authorities() == null ? AppAuthorities.ROLE_USER.name() : user.authorities(), user.picture());
+        return registerUser(user.id(),
+                user.username(),
+                user.email(),
+                user.authorities() == null ? AppAuthorities.ROLE_USER.name() : user.authorities(),
+                user.picture() == null ? defaultUserPicture : user.picture());
     }
 
     /**Saves {@link UserEntity} to database, uploads picture to {@link ObjectStorageService} and sends message to processor service.
@@ -233,25 +222,6 @@ public class UserService {
         return userConverter.convertToModel(userEntity);
     }
 
-    /**Uploads image to {@link ObjectStorageService}, sends message to Kafka for processing this image and waits until processing done.
-     * @param inputStream input stream of the picture
-     * @param pictureName name of the image by which it will be saved
-     * @throws Exception - if can not compress this image or if {@link ObjectStorageService} can not upload this image.
-     */
-    private String savePicture(InputStream inputStream, String pictureName) throws Exception {
-        Assert.notNull(inputStream, "Input stream can not be null");
-        Assert.notNull(pictureName, "Picture name can not be null");
-
-        objectStorageService.putObject(inputStream, pictureName);
-        RequestReplyFuture<String, String, Boolean> response = replyingKafkaTemplate.sendAndReceive(
-                new ProducerRecord<>(KafkaConfig.USER_PICTURE_INPUT_TOPIC ,pictureName)
-        );
-        if(!response.get(5, TimeUnit.MINUTES).value()){
-            throw new ProcessingException("User picture processing failed");
-        }
-        return pictureName;
-    }
-
     /**Adds search option in search history. Removes extra options if there are more than specified
      *  in {@code MAX_SEARCH_HISTORY_OPTIONS}. If contains the same search option, updates date of this option
      * @param id user id
@@ -260,7 +230,6 @@ public class UserService {
      */
     public void addSearchOption(String id, String searchOption) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() ->  new NotFoundException("User not found"));
-        System.out.println("option " + searchOption);
         if(userEntity.getSearchHistory() == null) userEntity.setSearchHistory(new ArrayList<>());                               //if adding at the first time
 
         List<SearchHistory> searchHistoryList = userEntity.getSearchHistory();
@@ -446,16 +415,24 @@ public class UserService {
 
         String[] names = "Liam Noah Oliver James Elijah William Henry Lucas Benjamin Theodore Mateo Levi Sebastian Daniel Jack Michael Alexander Owen Asher Samuel Ethan Leo Jackson Mason Ezra John Hudson Luca Aiden Joseph David Jacob Logan Luke Julian Gabriel Grayson Wyatt Matthew Maverick Dylan Isaac Elias Anthony Thomas Jayden Carter Santiago Ezekiel Charles Josiah Caleb Cooper Lincoln Miles Christopher Nathan Isaiah Kai Joshua Andrew Angel Adrian Cameron Nolan Waylon Jaxon Roman Eli Wesley Aaron Ian Christian Ryan Leonardo Brooks Axel Walker Jonathan Easton Everett Weston Bennett Robert Jameson Landon Silas Jose Beau Micah Colton Jordan Jeremiah Parker Greyson Rowan Adam Nicholas Theo Xavier".split(" ");
         File[] profilePics = new File(userPictureFolderPath).listFiles();
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         ThreadPoolExecutor executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(12);
         Runnable task = () -> {
+            RequestContextHolder.setRequestAttributes(requestAttributes);
+
             int index = (int)Math.floor(Math.random() * names.length);
             String uuid = genUserId();
             String username = names[index];
             File profilePic = profilePics[(int)Math.floor(Math.random() * profilePics.length)];
             String email = uuid + "@gmail.com";
-            try (InputStream pictureInputStream = new FileInputStream(profilePic)){
-                registerUser(uuid, username,email, AppAuthorities.ROLE_USER.name(), savePicture(pictureInputStream, AppConstants.USER_PATH + profilePic.getName()));
-            } catch (Exception e) {
+            try {
+                registerUser(uuid,
+                        username,
+                        email,
+                        AppAuthorities.ROLE_USER.name(),
+                        imageUploadHttpClient.uploadUserPicture(uuid, profilePic)
+                );
+            } catch (AlreadyExistException | IllegalArgumentException e) {
                 createdUsers.decrementAndGet();
                 logger.error(e.getMessage(), e);
             }

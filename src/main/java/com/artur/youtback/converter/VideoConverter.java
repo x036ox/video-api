@@ -31,14 +31,6 @@ public class VideoConverter {
                     + AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + AppConstants.THUMBNAIL_FILENAME +
                     ") from " + objectStorageService.getClass() + "!! User has empty thumbnail displayed");
         }
-        String encodedPicture = null;
-        try {
-            encodedPicture = ImageUtils.encodeImageBase64(objectStorageService.getObject(videoEntity.getUser().getPicture()));
-        } catch (Exception e) {
-            logger.error("Cant get user picture (path: "
-                    + videoEntity.getUser().getPicture() +
-                    ") from " + objectStorageService.getClass() + "!! User has empty thumbnail displayed");
-        }
         return Video.newBuilder()
                 .id(videoEntity.getId())
                 .title(videoEntity.getTitle())
@@ -49,7 +41,7 @@ public class VideoConverter {
                 .uploadDate(handleDate(videoEntity.getUploadDate()))
                 .description(videoEntity.getDescription())
                 .channelId(videoEntity.getUser().getId())
-                .creatorPicture(encodedPicture)
+                .creatorPicture(videoEntity.getUser().getPicture())
                 .category(videoEntity.getVideoMetadata().getCategory())
                 .creatorName(videoEntity.getUser().getUsername())
                 .build();

@@ -59,16 +59,14 @@ class UserServiceTest extends YoutBackApplicationTests {
         userService.update(new UserUpdateRequest(
                 "new test-user",
                 "new password",
-                new MockMultipartFile("new-user-picture", "picture.png", "image/png", new byte[]{2, 3, 4})
+                TEST_IMAGE_FILE
         ), id);
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Cannot find user"));
-        verify(objectStorageService).putObject(any(), anyString());
-        verify(replyingKafkaTemplate, times(1)).sendAndReceive(any(ProducerRecord.class));
         assertEquals("new test-user", userEntity.getUsername());
 
         userService.deleteById(id);
         assertTrue(userRepository.findById(id).isEmpty());
-        verify(objectStorageService).removeObject( anyString());
+        verify(objectStorageService).removeFolder(AppConstants.USER_PATH + userEntity.getId());
     }
 
 

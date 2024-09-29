@@ -37,7 +37,7 @@ public class SecurityConfig{
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         return http
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/user/user-info"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/user/user-info", "/api/image/**"))
                 .authorizeHttpRequests(authorize -> {
                     authorize
                             .anyRequest().permitAll();

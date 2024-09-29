@@ -37,6 +37,9 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:8090/oauth2/jwks
 
+server:
+  forward-headers-strategy: native
+
 
 #server:
 #  ssl:
@@ -45,11 +48,11 @@ spring:
 
 application:
   path:
-    local:
-      default-user-picture: src/main/resources/picture/default-picture.png
-    user-picture: "/user/picture"
-  recommendations-service:
-    url: http://localhost:8010/recs
+    default-user-picture: classpath:/picture/default-picture.png
+  url:
+    user-picture-upload: http://localhost:8080/api/image/user
+    default-user-picture: http://localhost:8080/api/image/user/default
+    recommendations-service: http://localhost:8010/recs
 
 
 object-storage:

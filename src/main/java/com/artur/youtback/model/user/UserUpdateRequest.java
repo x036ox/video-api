@@ -1,8 +1,6 @@
 package com.artur.youtback.model.user;
 
-import org.springframework.web.multipart.MultipartFile;
-
-public record UserUpdateRequest(String username, String authorities, MultipartFile picture) {
+public record UserUpdateRequest(String username, String authorities, String picture) {
     @Override
     public String toString() {
         return "UserUpdateRequest{" +

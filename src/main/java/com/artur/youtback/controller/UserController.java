@@ -214,35 +214,6 @@ public class UserController {
         }
     }
 
-    @Operation(description = "Get user`s picture base64 encoded. Default user picture available at /picture/default")
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Encoded base64 user`s picture",
-                    content = @Content(
-                            mediaType = MediaType.IMAGE_PNG_VALUE,
-                            schema = @Schema(type = "string")
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "Picture was not found or some error occurred",
-                    content = @Content()
-            )
-    })
-    @GetMapping(value = "/picture/{name}", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
-    public ResponseEntity<?> getPicture(@PathVariable String name){
-        try {
-            if(name.equals("default")){
-                return ResponseEntity.ok(userService.getDefaultPicture());
-            }
-            return ResponseEntity.ok(userService.getPicture(name));
-        } catch (Exception e) {
-            logger.error("Could not retrieve user picture: " + name, e);
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
     @Operation(description = "Get user`s search history. User id will be retrieved from jwt token")
     @ApiResponses(value = {
             @ApiResponse(
@@ -381,7 +352,6 @@ public class UserController {
     @PostMapping("/user-info")
     public ResponseEntity<?> postUser(@ModelAttribute UserCreateRequest userCreateRequest){
         try{
-            System.out.println("reqqqqq " +  userCreateRequest);
             userService.registerUser(userCreateRequest);
             return ResponseEntity.ok(null);
         } catch (AlreadyExistException e){

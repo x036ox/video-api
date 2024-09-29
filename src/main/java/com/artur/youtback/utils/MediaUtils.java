@@ -4,6 +4,7 @@ import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.sax.BodyContentHandler;
+import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 import org.xml.sax.SAXException;
 
@@ -50,5 +51,15 @@ public class MediaUtils {
         return getMetadata(inputStream).get("xmpDM:duration");
     }
 
-
+    public static MediaType getMediaTypeForFile(String extension) {
+        return switch (extension.toLowerCase()) {
+            case "jpg", "jpeg" -> MediaType.IMAGE_JPEG;
+            case "png" -> MediaType.IMAGE_PNG;
+            case "gif" -> MediaType.IMAGE_GIF;
+            case "mp4" -> MediaType.parseMediaType("video/mp4");
+            case "avi" -> MediaType.parseMediaType("video/x-msvideo");
+            case "mov" -> MediaType.parseMediaType("video/quicktime");
+            default -> MediaType.APPLICATION_OCTET_STREAM;
+        };
+    }
 }
