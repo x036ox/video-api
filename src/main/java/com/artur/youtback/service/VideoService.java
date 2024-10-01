@@ -280,14 +280,14 @@ public class VideoService {
             String thumbnailFilename = folder + "/" + AppConstants.THUMBNAIL_FILENAME;
             objectStorageService.putObject(thumbnail, thumbnailFilename);
             RequestReplyFuture<String, String, Boolean> thumbnailResponseFuture = replyingKafkaTemplate.sendAndReceive(
-                    new ProducerRecord<>(KafkaConfig.THUMBNAIL_INPUT_TOPIC, thumbnailFilename)
+                    new ProducerRecord<>(KafkaConfig.THUMBNAIL_INPUT_TOPIC, videoEntity.getId().toString(), thumbnailFilename)
             );
 
             video.reset();
             String videoFilename = AppConstants.VIDEO_PATH + videoEntity.getId() + "/" + "index.mp4";
             objectStorageService.putObject(video, videoFilename);
             RequestReplyFuture<String, String, Boolean> videoResponseFuture = replyingKafkaTemplate.sendAndReceive(
-                    new ProducerRecord<>(KafkaConfig.VIDEO_INPUT_TOPIC, videoFilename)
+                    new ProducerRecord<>(KafkaConfig.VIDEO_INPUT_TOPIC,videoEntity.getId().toString(), videoFilename)
             );
 
             if(!thumbnailResponseFuture.get(5, TimeUnit.MINUTES).value() || !videoResponseFuture.get(5, TimeUnit.MINUTES).value()){

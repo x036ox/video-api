@@ -90,7 +90,7 @@ public class ImageService {
         try (inputStream){
             objectStorageService.putObject(inputStream, pictureName);
             RequestReplyFuture<String, String, Boolean> response = replyingKafkaTemplate.sendAndReceive(
-                    new ProducerRecord<>(kafkaTopic ,pictureName)
+                    new ProducerRecord<>(kafkaTopic,pictureName, pictureName)
             );
             if(!response.get(5, TimeUnit.MINUTES).value()){
                 throw new ProcessingException("User picture processing failed");
