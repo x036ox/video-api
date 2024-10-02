@@ -37,7 +37,7 @@ public class UserConverter {
                 .picture(userEntity.getPicture())
                 .subscribers(Integer.toString(subscribers.size()).concat(subscribers.size() == 1 ? " subscriber" : " subscribers"))
                 .userVideos(userEntity.getUserVideos().stream().map(videoConverter::convertToModel).collect(Collectors.toList()))
-                .searchHistory(userEntity.getSearchHistory().stream().map(SearchHistory::getSearchOption).toList())
+                .searchHistory(searchOptionList)
                 .authorities(userEntity.getAuthorities())
                 .build();
     }
