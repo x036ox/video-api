@@ -1,12 +1,12 @@
 spring:
   kafka:
-    bootstrap-servers: http://${KAFKA_HOST:localhost}:${KAFKA_PORT:9092}
+    bootstrap-servers: http://${KAFKA_HOST:kafka}:${KAFKA_PORT:9092}
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
   datasource:
-    url: jdbc:mysql://${MINIO_HOST:localhost}:${MYSQL_PORT:3306}/yout
+    url: jdbc:mysql://${MINIO_HOST:db}:${MYSQL_PORT:3306}/yout
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:adminadmin}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -30,12 +30,13 @@ spring:
           starttls: true
   data:
     redis:
-      host: localhost
+      host: redis
   security:
     oauth2:
       resourceserver:
+        client-id: video-api
         jwt:
-          jwk-set-uri: http://localhost:8090/oauth2/jwks
+          jwk-set-uri: http://keycloak:8088/realms/video-api/protocol/openid-connect/certs
 
 server:
   forward-headers-strategy: native
@@ -50,14 +51,14 @@ application:
   path:
     default-user-picture: classpath:/picture/default-picture.png
   url:
-    user-picture-upload: http://localhost:8080/api/image/user
-    default-user-picture: http://localhost:8080/api/image/user/default
-    recommendations-service: http://localhost:8010/recs
+    user-picture-upload: http://video-api:8080/api/image/user
+    default-user-picture: http://video-api:8080/api/image/user/default
+    recommendations-service: http://recommendations:8010/recs
 
 
 object-storage:
   root-folder: video-api
-  url: http://${OBJECT_STORAGE_HOST:localhost}:9000
+  url: http://${OBJECT_STORAGE_HOST:minio}:9000
   access-key: ${OBJECT_STORAGE_ACCESS:admin}
   secret-key: ${OBJECT_STORAGE_SECRET:adminadmin}
 
