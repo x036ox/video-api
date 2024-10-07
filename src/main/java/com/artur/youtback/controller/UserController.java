@@ -97,7 +97,7 @@ public class UserController {
             )
     })
     @GetMapping("/admin")
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> findByOption(
             @RequestParam List<String> option,
             @RequestParam List<String> value
@@ -542,16 +542,16 @@ public class UserController {
             )
     })
     @SecurityRequirement(name = "jwt")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @DeleteMapping("")
-    public ResponseEntity<String> deleteById(){
+    public ResponseEntity<String> deleteById(@RequestParam String userId){
         try{
-            userService.deleteById(AuthenticationUtils.getUserId());
+            userService.deleteById(userId);
             return ResponseEntity.ok(null);
         }catch (NotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
         }
     }
 

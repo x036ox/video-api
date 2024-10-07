@@ -1,10 +1,10 @@
 package com.artur.youtback.model.user;
 
-public record UserUpdateRequest(String username, String authorities, String picture) {
+public record UserUpdateRequest(String email, String authorities, String picture) {
     @Override
     public String toString() {
         return "UserUpdateRequest{" +
-                ", username='" + username + '\'' +
+                ", username='" + email + '\'' +
                 ", picture=" + picture +
                 '}';
     }

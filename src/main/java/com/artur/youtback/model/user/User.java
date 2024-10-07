@@ -55,6 +55,7 @@ public class User implements Serializable {
         this.id = id;
         this.username = username;
         this.picture = picture;
+        this.email = email;
         this.subscribers = subscribers;
         this.userVideos = userVideos;
         this.searchHistory = searchHistory;

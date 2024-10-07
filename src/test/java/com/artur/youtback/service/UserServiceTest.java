@@ -57,12 +57,12 @@ class UserServiceTest extends YoutBackApplicationTests {
 
         clearInvocations(objectStorageService, replyingKafkaTemplate);
         userService.update(new UserUpdateRequest(
-                "new test-user",
+                "example@gmail.com",
                 "new password",
                 TEST_IMAGE_FILE
         ), id);
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Cannot find user"));
-        assertEquals("new test-user", userEntity.getUsername());
+        assertEquals("example@gmail.com", userEntity.getEmail());
 
         userService.deleteById(id);
         assertTrue(userRepository.findById(id).isEmpty());

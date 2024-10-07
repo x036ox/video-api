@@ -1,6 +1,5 @@
 package com.artur.youtback.service;
 
-import com.artur.youtback.config.KafkaConfig;
 import com.artur.youtback.converter.UserConverter;
 import com.artur.youtback.converter.VideoConverter;
 import com.artur.common.entity.Like;
@@ -30,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -151,6 +151,9 @@ public class UserService {
     @Transactional
     public void deleteById(String id) throws Exception {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not Found"));
+        if(!userEntity.getEmail().contains(id)){
+            throw new Exception("Allowed to delete only dummy users");
+        }
         userRepository.delete(userEntity);
         objectStorageService.removeFolder(AppConstants.USER_PATH + userEntity.getId());
         logger.info("User with id {} successfully deleted" , id);
@@ -171,8 +174,8 @@ public class UserService {
         if(optionalUserEntity.isEmpty()) throw new NotFoundException("User not Found");
 
         UserEntity userEntity = optionalUserEntity.get();
-        if(user.username() != null){
-            userEntity.setUsername(user.username());
+        if(user.email() != null){
+            userEntity.setEmail(user.email());
         }
         if(user.picture() != null){
            userEntity.setPicture(user.picture());

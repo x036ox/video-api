@@ -33,6 +33,7 @@ public class UserConverter {
                 .sorted(new SearchHistoryComparator()).map(SearchHistory::getSearchOption).toList();
         return User.builder()
                 .id(userEntity.getId())
+                .email(userEntity.getEmail())
                 .username(userEntity.getUsername())
                 .picture(userEntity.getPicture())
                 .subscribers(Integer.toString(subscribers.size()).concat(subscribers.size() == 1 ? " subscriber" : " subscribers"))
