@@ -255,14 +255,18 @@ public class UserService {
      * @param videoId video that liked user
      * @throws NotFoundException if user or video not found
      */
-    public void likeVideo(String userId, Long videoId) throws NotFoundException {
+    @CachePut(value = "video", key = "#videoId")
+    public Video likeVideo(String userId, Long videoId) throws NotFoundException {
         UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         VideoEntity videoEntity = videoRepository.findById(videoId).orElseThrow(() -> new NotFoundException("Video not found"));
         Set<Like> likedVideos = userEntity.getLikes();
         //we cant use contains() because we don't have like's id
         Optional<Like> optionalLike = likedVideos.stream().filter(like -> like.getVideoEntity().getId().equals(videoId)).findFirst();
         if(optionalLike.isEmpty()){
-            likeRepository.save(Like.create(userEntity, videoEntity));
+            Like like = Like.create(userEntity, videoEntity);
+            videoEntity.getLikes().add(like);
+            userEntity.getLikes().add(like);
+            likeRepository.save(like);
         }
         else {
             Like like = optionalLike.get();
@@ -270,6 +274,7 @@ public class UserService {
             like.getVideoEntity().getLikes().remove(like);
             likeRepository.delete(like);
         }
+        return videoConverter.convertToModel(videoEntity);
     }
 
     /**Dislike this video. If liked, removes it.
